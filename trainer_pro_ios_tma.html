@@ -1,0 +1,2563 @@
+<!DOCTYPE html>
+<html lang="ru" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Trainer Pro iOS — Помощник тренера DDX</title>
+    <!-- Telegram WebApp SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        ios: {
+                            bg: '#F2F2F7',
+                            card: '#FFFFFF',
+                            darkBg: '#000000',
+                            darkCard: '#1C1C1E',
+                            darkElevated: '#2C2C2E',
+                            blue: '#007AFF',
+                            green: '#34C759',
+                            orange: '#FF9500',
+                            red: '#FF3B30',
+                            purple: '#AF52DE',
+                            indigo: '#5856D6',
+                            gray: '#8E8E93',
+                            separator: '#C6C6C8',
+                            darkSeparator: '#38383A'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* iOS System Typography & Smooth Experience */
+        :root {
+            --safe-bottom: env(safe-area-inset-bottom, 16px);
+        }
+        * {
+            -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", "Helvetica Neue", sans-serif;
+            background-color: #F2F2F7;
+            color: #000000;
+            overflow-x: hidden;
+            user-select: none;
+            -webkit-font-smoothing: antialiased;
+        }
+        html.dark body {
+            background-color: #000000;
+            color: #FFFFFF;
+        }
+
+        /* Frosted Glass Bars */
+        .ios-blur-bar {
+            background: rgba(242, 242, 247, 0.84);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+        }
+        html.dark .ios-blur-bar {
+            background: rgba(28, 28, 30, 0.84);
+        }
+
+        /* iOS Cards */
+        .ios-card {
+            background: #FFFFFF;
+            border-radius: 14px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+            transition: transform 0.15s ease, background-color 0.2s ease;
+        }
+        html.dark .ios-card {
+            background: #1C1C1E;
+            box-shadow: none;
+        }
+
+        /* Active Press Effect */
+        .ios-press:active {
+            transform: scale(0.975);
+            opacity: 0.88;
+        }
+
+        /* Custom Scrollbars */
+        ::-webkit-scrollbar {
+            width: 0px;
+            height: 0px;
+        }
+
+        /* iOS Input Resets */
+        input, textarea, select {
+            user-select: text;
+            font-family: inherit;
+        }
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        /* Slide-up Sheet Animation */
+        @keyframes slideUpSheet {
+            from { transform: translateY(100%); opacity: 0.5; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .animate-sheet {
+            animation: slideUpSheet 0.28s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+        }
+
+        @keyframes popIn {
+            from { transform: scale(0.92); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop {
+            animation: popIn 0.2s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+        }
+
+        /* Apple Notes Paper Lines */
+        .notes-paper {
+            background-image: linear-gradient(transparent, transparent 27px, rgba(142, 142, 147, 0.14) 28px);
+            background-size: 100% 28px;
+            line-height: 28px;
+        }
+    </style>
+</head>
+<body class="min-h-full pb-28">
+
+    <!-- TOP NAVIGATION BAR (Frosted Glass iOS Style) -->
+    <header class="sticky top-0 z-30 ios-blur-bar border-b border-black/10 dark:border-white/10 px-4 pt-3 pb-2.5 transition-colors">
+        <div class="max-w-xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-ios-blue to-ios-indigo flex items-center justify-center text-white shadow-sm">
+                    <i class="fa-solid fa-dumbbell text-sm"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-1.5">
+                        <h1 id="headerTitle" class="text-[19px] font-bold tracking-tight leading-none">Подопечные</h1>
+                        <span class="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded-md bg-ios-blue/10 text-ios-blue dark:bg-ios-blue/20">DDX Pro</span>
+                    </div>
+                    <p id="trainerAccountBadge" class="text-[11px] text-ios-gray mt-0.5 flex items-center gap-1">
+                        <i class="fa-brands fa-telegram text-ios-blue"></i>
+                        <span id="tgUserLabel">Личный аккаунт тренера</span>
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <!-- Cloud Sync Indicator -->
+                <button onclick="window.app.manualCloudSync()" id="syncStatusPill" class="px-2.5 py-1 rounded-full text-[11px] font-medium bg-ios-green/15 text-ios-green flex items-center gap-1 ios-press" title="Статус синхронизации с вашим Telegram">
+                    <i class="fa-solid fa-cloud-check text-[10px]"></i>
+                    <span id="syncStatusText">TG Sync</span>
+                </button>
+
+                <!-- Dark Mode Toggle -->
+                <button onclick="window.app.toggleTheme()" class="w-8 h-8 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center text-gray-700 dark:text-gray-200 ios-press" aria-label="Тема">
+                    <i id="themeIcon" class="fa-solid fa-moon text-xs"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT CONTAINER -->
+    <main class="max-w-xl mx-auto px-3.5 pt-3 space-y-4">
+
+        <!-- ==========================================
+             TAB 1: ПОДОПЕЧНЫЕ (CLIENTS & NOTES)
+             ========================================== -->
+        <section id="tab-clients" class="space-y-4">
+            <!-- Top Action Bar -->
+            <div class="flex items-center justify-between gap-2">
+                <div class="relative flex-1">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-ios-gray text-xs"></i>
+                    <input id="clientSearchInput" oninput="window.app.renderClients()" type="text" placeholder="Поиск подопечного..."
+                        class="w-full pl-8 pr-3 py-2 rounded-xl bg-black/[0.06] dark:bg-white/[0.1] text-sm focus:outline-none focus:ring-2 focus:ring-ios-blue/50">
+                </div>
+                <button onclick="window.app.openClientModal()" class="px-3.5 py-2 rounded-xl bg-ios-blue text-white text-sm font-semibold flex items-center gap-1.5 shadow-sm ios-press">
+                    <i class="fa-solid fa-user-plus text-xs"></i>
+                    <span>Добавить</span>
+                </button>
+            </div>
+
+            <!-- Quick Stats Summary -->
+            <div class="grid grid-cols-3 gap-2.5">
+                <div class="ios-card p-3 text-center">
+                    <div id="statClientsCount" class="text-xl font-bold text-ios-blue">0</div>
+                    <div class="text-[11px] text-ios-gray font-medium">Подопечных</div>
+                </div>
+                <div class="ios-card p-3 text-center">
+                    <div id="statProgramsCount" class="text-xl font-bold text-ios-indigo">0</div>
+                    <div class="text-[11px] text-ios-gray font-medium">Программ</div>
+                </div>
+                <div class="ios-card p-3 text-center">
+                    <div id="statWorkoutsCount" class="text-xl font-bold text-ios-green">0</div>
+                    <div class="text-[11px] text-ios-gray font-medium">Тренировок</div>
+                </div>
+            </div>
+
+            <!-- Clients List Container -->
+            <div id="clientsListContainer" class="space-y-3"></div>
+        </section>
+
+        <!-- ==========================================
+             FULL-SCREEN SUBVIEW: ОКНО С ЗАПИСКАМИ О КЛИЕНТЕ
+             ========================================== -->
+        <section id="view-client-notes" class="hidden space-y-4">
+            <!-- iOS Back Navigation Header -->
+            <div class="ios-card p-3.5 flex items-center justify-between">
+                <button onclick="window.app.closeClientNotes()" class="text-ios-blue font-medium text-sm flex items-center gap-1.5 ios-press">
+                    <i class="fa-solid fa-chevron-left"></i>
+                    <span>Подопечные</span>
+                </button>
+                <div class="text-center">
+                    <div class="text-xs text-ios-gray">Записки тренера</div>
+                    <div id="notesClientName" class="text-sm font-bold leading-tight">Имя клиента</div>
+                </div>
+                <button onclick="window.app.saveClientNotesProfile(true)" class="text-ios-blue font-semibold text-sm ios-press">
+                    Готово
+                </button>
+            </div>
+
+            <!-- Structured Profile & Level Card -->
+            <div class="ios-card p-4 space-y-3.5">
+                <div class="flex items-center justify-between border-b border-black/5 dark:border-white/10 pb-2.5">
+                    <div class="flex items-center gap-2">
+                        <span class="w-7 h-7 rounded-lg bg-ios-orange/15 text-ios-orange flex items-center justify-center">
+                            <i class="fa-solid fa-sliders text-xs"></i>
+                        </span>
+                        <h3 class="font-semibold text-sm">Анкета и уровень подготовки</h3>
+                    </div>
+                    <span id="notesAutoSaveBadge" class="text-[11px] text-ios-green font-medium">Автосохранение</span>
+                </div>
+
+                <!-- Segmented Level Selector -->
+                <div>
+                    <label class="text-xs text-ios-gray font-medium block mb-1.5">Уровень подготовки</label>
+                    <div class="grid grid-cols-3 gap-1.5 bg-black/5 dark:bg-white/10 p-1 rounded-xl" id="notesLevelSegment">
+                        <button type="button" onclick="window.app.setClientNotesLevel('Новичок')" data-level="Новичок" class="py-1.5 rounded-lg text-xs font-semibold transition-all">Новичок</button>
+                        <button type="button" onclick="window.app.setClientNotesLevel('Средний')" data-level="Средний" class="py-1.5 rounded-lg text-xs font-semibold transition-all">Средний</button>
+                        <button type="button" onclick="window.app.setClientNotesLevel('Продвинутый')" data-level="Продвинутый" class="py-1.5 rounded-lg text-xs font-semibold transition-all">Продвинутый</button>
+                    </div>
+                </div>
+
+                <!-- Anthropometry Row -->
+                <div class="grid grid-cols-2 gap-2.5">
+                    <div>
+                        <label class="text-xs text-ios-gray font-medium block mb-1">Текущий вес / Рост</label>
+                        <input id="notesClientMetrics" oninput="window.app.saveClientNotesProfile(false)" type="text" placeholder="Напр: 78 кг / 180 см"
+                            class="w-full px-3 py-2 rounded-xl bg-black/[0.04] dark:bg-white/[0.07] text-sm focus:outline-none focus:ring-2 focus:ring-ios-blue/40">
+                    </div>
+                    <div>
+                        <label class="text-xs text-ios-gray font-medium block mb-1">Предпочитаемый сплит</label>
+                        <input id="notesClientSplit" oninput="window.app.saveClientNotesProfile(false)" type="text" placeholder="Фулбади / 3 раза в нед."
+                            class="w-full px-3 py-2 rounded-xl bg-black/[0.04] dark:bg-white/[0.07] text-sm focus:outline-none focus:ring-2 focus:ring-ios-blue/40">
+                    </div>
+                </div>
+
+                <!-- Client Wishes / Goals -->
+                <div>
+                    <label class="text-xs text-ios-gray font-medium flex items-center gap-1 mb-1">
+                        <i class="fa-solid fa-bullseye text-ios-blue text-[11px]"></i>
+                        <span>Пожелания клиента и основные цели</span>
+                    </label>
+                    <textarea id="notesClientGoals" oninput="window.app.saveClientNotesProfile(false)" rows="2" placeholder="Напр.: акцент на ягодичные и спину, убрать дискомфорт в пояснице, набрать мышечную массу..."
+                        class="w-full px-3 py-2 rounded-xl bg-black/[0.04] dark:bg-white/[0.07] text-sm focus:outline-none focus:ring-2 focus:ring-ios-blue/40"></textarea>
+                </div>
+
+                <!-- Contraindications / Injuries -->
+                <div>
+                    <label class="text-xs text-ios-gray font-medium flex items-center gap-1 mb-1">
+                        <i class="fa-solid fa-triangle-exclamation text-ios-red text-[11px]"></i>
+                        <span>Ограничения, травмы, особенности здоровья</span>
+                    </label>
+                    <textarea id="notesClientHealth" oninput="window.app.saveClientNotesProfile(false)" rows="2" placeholder="Напр.: протрузия L4-L5, исключить осевую нагрузку, беречь правое плечо..."
+                        class="w-full px-3 py-2 rounded-xl bg-black/[0.04] dark:bg-white/[0.07] text-sm focus:outline-none focus:ring-2 focus:ring-ios-red/40"></textarea>
+                </div>
+            </div>
+
+            <!-- Apple Notes Style Free-form Notepad -->
+            <div class="ios-card p-4 space-y-3">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="w-7 h-7 rounded-lg bg-yellow-400/20 text-yellow-600 dark:text-yellow-400 flex items-center justify-center">
+                            <i class="fa-solid fa-note-sticky text-xs"></i>
+                        </span>
+                        <div>
+                            <h3 class="font-semibold text-sm">Блокнот тренера (свободные заметки)</h3>
+                            <p class="text-[11px] text-ios-gray">Записывайте наблюдения по технике, рабочим весам и самочувствию</p>
+                        </div>
+                    </div>
+                </div>
+
+                <textarea id="notesFreeformPad" oninput="window.app.saveClientNotesProfile(false)" rows="5"
+                    placeholder="Свободная записка о подопечном..."
+                    class="w-full px-3 py-2 rounded-xl bg-yellow-50/70 dark:bg-yellow-500/5 border border-yellow-400/30 text-sm notes-paper focus:outline-none focus:ring-2 focus:ring-yellow-500/40"></textarea>
+
+                <!-- Quick Dated Note Adder -->
+                <div class="pt-2 border-t border-black/5 dark:border-white/10 space-y-2">
+                    <label class="text-xs font-semibold text-ios-gray uppercase tracking-wider block">Быстрые заметки по датам</label>
+                    <div class="flex gap-2">
+                        <input id="quickNoteInput" type="text" placeholder="Добавить заметку (напр. «Отлично пошел жим 65кг»)..."
+                            onkeydown="if(event.key==='Enter') window.app.addClientQuickNote()"
+                            class="flex-1 px-3 py-2 rounded-xl bg-black/[0.05] dark:bg-white/[0.08] text-sm focus:outline-none focus:ring-2 focus:ring-ios-blue/40">
+                        <button onclick="window.app.addClientQuickNote()" class="px-3.5 py-2 rounded-xl bg-ios-blue text-white text-sm font-semibold ios-press">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                    </div>
+                    <div id="clientQuickNotesList" class="space-y-2 pt-1"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==========================================
+             TAB 2: ТРЕНИРОВКА (ACTIVE WORKOUT SESSION)
+             ========================================== -->
+        <section id="tab-workout" class="hidden space-y-4">
+            <!-- Empty State when no workout is running -->
+            <div id="workoutInactiveState" class="space-y-4">
+                <div class="ios-card p-5 text-center space-y-3">
+                    <div class="w-14 h-14 rounded-2xl bg-ios-blue/10 text-ios-blue mx-auto flex items-center justify-center text-2xl">
+                        <i class="fa-solid fa-bolt"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-bold">Запуск тренировки</h2>
+                        <p class="text-xs text-ios-gray mt-1 max-w-xs mx-auto">
+                            Выберите подопечного и загрузите готовую программу из шаблонов или соберите новую тренировку с нуля.
+                        </p>
+                    </div>
+
+                    <!-- Client Selector for Active Workout -->
+                    <div class="text-left max-w-sm mx-auto space-y-2 pt-2">
+                        <label class="text-xs font-semibold text-ios-gray uppercase">Подопечный</label>
+                        <select id="startWorkoutClientSelect" class="w-full px-3.5 py-2.5 rounded-xl bg-black/[0.05] dark:bg-white/[0.09] text-sm font-medium focus:outline-none">
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2">
+                        <button onclick="window.app.openSelectTemplateSheet()" class="w-full py-3 px-4 rounded-xl bg-ios-blue text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-sm ios-press">
+                            <i class="fa-solid fa-folder-open"></i>
+                            <span>Взять из готовых программ</span>
+                        </button>
+                        <button onclick="window.app.startBlankWorkout()" class="w-full py-3 px-4 rounded-xl bg-black/[0.06] dark:bg-white/[0.1] font-semibold text-sm flex items-center justify-center gap-2 ios-press">
+                            <i class="fa-solid fa-plus"></i>
+                            <span>Создать новую с нуля</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Recent Workouts History Feed -->
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between px-1">
+                        <h3 class="text-xs font-semibold uppercase tracking-wider text-ios-gray">Последние проведенные тренировки</h3>
+                    </div>
+                    <div id="recentWorkoutsContainer" class="space-y-2.5"></div>
+                </div>
+            </div>
+
+            <!-- Active Workout Running State -->
+            <div id="workoutActiveState" class="hidden space-y-3.5">
+                <!-- Sticky Workout Session Status Card -->
+                <div class="ios-card p-4 space-y-3 border-l-4 border-ios-blue">
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="px-2 py-0.5 rounded-md bg-ios-green/15 text-ios-green text-[11px] font-bold flex items-center gap-1">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-ios-green animate-pulse"></span>
+                                    ИДЕТ ТРЕНИРОВКА
+                                </span>
+                                <span id="activeWorkoutTimer" class="text-xs font-mono font-semibold text-ios-gray">00:00</span>
+                            </div>
+                            <input id="activeWorkoutTitleInput" oninput="window.app.updateActiveWorkoutTitle(this.value)"
+                                class="mt-1.5 w-full font-bold text-base bg-transparent border-b border-transparent focus:border-ios-blue focus:outline-none"
+                                value="Тренировка">
+                        </div>
+
+                        <button onclick="window.app.cancelActiveWorkout()" class="px-2.5 py-1.5 rounded-lg bg-ios-red/10 text-ios-red text-xs font-semibold ios-press">
+                            Сбросить
+                        </button>
+                    </div>
+
+                    <!-- Client & Source Program Info -->
+                    <div class="flex items-center justify-between text-xs pt-1 border-t border-black/5 dark:border-white/10 flex-wrap gap-2">
+                        <div class="flex items-center gap-2">
+                            <span class="text-ios-gray">Клиент:</span>
+                            <select id="activeWorkoutClientSelect" onchange="window.app.changeActiveWorkoutClient(this.value)"
+                                class="font-semibold bg-black/5 dark:bg-white/10 px-2.5 py-1 rounded-lg focus:outline-none">
+                            </select>
+                            <button onclick="window.app.openActiveClientNotesShortcut()" class="text-ios-blue font-medium flex items-center gap-1 px-2 py-1 rounded-lg bg-ios-blue/10 ios-press" title="Открыть заметки клиента">
+                                <i class="fa-solid fa-note-sticky text-[11px]"></i>
+                                <span>Заметки</span>
+                            </button>
+                        </div>
+
+                        <div id="activeTemplateSourceBadge" class="text-[11px] text-ios-gray"></div>
+                    </div>
+
+                    <!-- Modified Notice Banner (Non-destructive Guarantee) -->
+                    <div id="activeWorkoutModifiedBanner" class="hidden rounded-xl bg-ios-orange/15 border border-ios-orange/30 p-2.5 flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-2 text-xs text-amber-800 dark:text-amber-300">
+                            <i class="fa-solid fa-shield-halved text-ios-orange"></i>
+                            <span>Структура изменена на тренировке. <b>Исходный шаблон не затронут</b> (обновится только после вашего подтверждения).</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Exercises & Split Sets List in Active Workout -->
+                <div id="activeWorkoutExercisesList" class="space-y-3"></div>
+
+                <!-- Add Exercise to Active Workout Button -->
+                <button onclick="window.app.openExercisePicker('workout')" class="w-full py-3.5 rounded-2xl border-2 border-dashed border-ios-blue/40 text-ios-blue font-semibold text-sm flex items-center justify-center gap-2 bg-ios-blue/5 ios-press">
+                    <i class="fa-solid fa-plus-circle"></i>
+                    <span>Добавить упражнение из базы DDX</span>
+                </button>
+
+                <!-- Workout Session Comment -->
+                <div class="ios-card p-3.5">
+                    <label class="text-xs font-semibold text-ios-gray block mb-1">Итоги / Заметка к тренировке</label>
+                    <textarea id="activeWorkoutComment" oninput="window.app.updateActiveWorkoutComment(this.value)" rows="2"
+                        placeholder="Как прошла тренировка, самочувствие подопечного, прогресс по весам..."
+                        class="w-full px-3 py-2 rounded-xl bg-black/[0.04] dark:bg-white/[0.07] text-sm focus:outline-none"></textarea>
+                </div>
+
+                <!-- Finish / Save Workout CTA -->
+                <div class="pt-1 pb-4">
+                    <button onclick="window.app.handleFinishWorkoutClick()" class="w-full py-3.5 rounded-2xl bg-ios-green text-white font-bold text-base shadow-md flex items-center justify-center gap-2 ios-press">
+                        <i class="fa-solid fa-check-double"></i>
+                        <span>Завершить и сохранить тренировку</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==========================================
+             TAB 3: ПРОГРАММЫ (REUSABLE WORKOUT TEMPLATES)
+             ========================================== -->
+        <section id="tab-programs" class="hidden space-y-4">
+            <!-- Header & Create Program CTA -->
+            <div class="ios-card p-4 flex items-center justify-between gap-3">
+                <div>
+                    <h2 class="font-bold text-base">Готовые программы</h2>
+                    <p class="text-xs text-ios-gray mt-0.5">Создайте шаблон один раз и используйте его на любых тренировках</p>
+                </div>
+                <button onclick="window.app.openProgramEditor(null)" class="px-3.5 py-2.5 rounded-xl bg-ios-blue text-white text-xs font-semibold flex items-center gap-1.5 shrink-0 shadow-sm ios-press">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>Новая программа</span>
+                </button>
+            </div>
+
+            <!-- Saved Templates List -->
+            <div id="programsListContainer" class="space-y-3"></div>
+        </section>
+
+        <!-- ==========================================
+             SUBVIEW: РЕДАКТОР ШАБЛОНА ПРОГРАММЫ
+             ========================================== -->
+        <section id="view-program-editor" class="hidden space-y-4">
+            <div class="ios-card p-3.5 flex items-center justify-between">
+                <button onclick="window.app.closeProgramEditor()" class="text-ios-blue font-medium text-sm flex items-center gap-1.5 ios-press">
+                    <i class="fa-solid fa-chevron-left"></i>
+                    <span>Назад</span>
+                </button>
+                <div class="font-bold text-sm" id="programEditorHeaderTitle">Шаблон программы</div>
+                <button onclick="window.app.saveProgramFromEditor()" class="text-ios-blue font-bold text-sm ios-press">
+                    Сохранить
+                </button>
+            </div>
+
+            <div class="ios-card p-4 space-y-3">
+                <div>
+                    <label class="text-xs text-ios-gray font-medium block mb-1">Название программы</label>
+                    <input id="programEditorTitle" type="text" placeholder="Напр.: Верх тела DDX (Грудь + Спина)"
+                        class="w-full px-3.5 py-2.5 rounded-xl bg-black/[0.05] dark:bg-white/[0.08] font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-ios-blue/40">
+                </div>
+                <div>
+                    <label class="text-xs text-ios-gray font-medium block mb-1">Описание / Фокус программы</label>
+                    <input id="programEditorDesc" type="text" placeholder="Напр.: Базовая силовая программа + тренажеры Хаммер"
+                        class="w-full px-3.5 py-2 rounded-xl bg-black/[0.05] dark:bg-white/[0.08] text-xs focus:outline-none focus:ring-2 focus:ring-ios-blue/40">
+                </div>
+            </div>
+
+            <!-- Exercises inside Template Editor -->
+            <div id="programEditorExercisesList" class="space-y-3"></div>
+
+            <button onclick="window.app.openExercisePicker('program')" class="w-full py-3.5 rounded-2xl border-2 border-dashed border-ios-blue/40 text-ios-blue font-semibold text-sm flex items-center justify-center gap-2 bg-ios-blue/5 ios-press">
+                <i class="fa-solid fa-plus-circle"></i>
+                <span>Добавить упражнение в программу</span>
+            </button>
+
+            <div class="pt-1 pb-4">
+                <button onclick="window.app.saveProgramFromEditor()" class="w-full py-3.5 rounded-2xl bg-ios-blue text-white font-bold text-sm shadow-md ios-press">
+                    Сохранить шаблон программы
+                </button>
+            </div>
+        </section>
+
+        <!-- ==========================================
+             TAB 4: БАЗА УПРАЖНЕНИЙ DDX FITNESS
+             ========================================== -->
+        <section id="tab-exercises" class="hidden space-y-3.5">
+            <!-- Search & Add New Exercise -->
+            <div class="flex items-center gap-2">
+                <div class="relative flex-1">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-ios-gray text-xs"></i>
+                    <input id="exerciseSearchInput" oninput="window.app.renderExercisesCatalog()" type="text"
+                        placeholder="Поиск упражнения или мышцы..."
+                        class="w-full pl-8 pr-3 py-2 rounded-xl bg-black/[0.06] dark:bg-white/[0.1] text-sm focus:outline-none focus:ring-2 focus:ring-ios-blue/40">
+                </div>
+                <button onclick="window.app.openEditExerciseModal(null)" class="px-3.5 py-2 rounded-xl bg-ios-blue text-white text-sm font-semibold flex items-center gap-1.5 ios-press">
+                    <i class="fa-solid fa-plus text-xs"></i>
+                    <span>Свое</span>
+                </button>
+            </div>
+
+            <!-- Horizontal Category Pills -->
+            <div id="exerciseCategoryPills" class="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar"></div>
+
+            <!-- Info Hint -->
+            <div class="px-3 py-2 rounded-xl bg-ios-blue/10 text-ios-blue text-xs flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                    <span>Нажмите на карандаш возле любого упражнения, чтобы изменить его название или рабочие мышцы.</span>
+                </div>
+            </div>
+
+            <!-- Grouped Exercises List -->
+            <div id="exercisesCatalogContainer" class="space-y-4"></div>
+        </section>
+
+    </main>
+
+    <!-- ==========================================
+         BOTTOM TAB BAR (iOS 17/18 Translucent Bar)
+         ========================================== -->
+    <nav class="fixed bottom-0 inset-x-0 z-30 ios-blur-bar border-t border-black/10 dark:border-white/10 pb-[var(--safe-bottom)]">
+        <div class="max-w-xl mx-auto grid grid-cols-4 pt-1.5 pb-1">
+            <button onclick="window.app.switchTab('clients')" id="nav-clients" class="flex flex-col items-center justify-center py-1 text-ios-blue ios-press">
+                <i class="fa-solid fa-users text-lg"></i>
+                <span class="text-[10px] font-medium mt-0.5">Подопечные</span>
+            </button>
+            <button onclick="window.app.switchTab('workout')" id="nav-workout" class="relative flex flex-col items-center justify-center py-1 text-ios-gray ios-press">
+                <i class="fa-solid fa-stopwatch-20 text-lg"></i>
+                <span class="text-[10px] font-medium mt-0.5">Тренировка</span>
+                <span id="navWorkoutDot" class="hidden absolute top-1 right-7 w-2 h-2 rounded-full bg-ios-green"></span>
+            </button>
+            <button onclick="window.app.switchTab('programs')" id="nav-programs" class="flex flex-col items-center justify-center py-1 text-ios-gray ios-press">
+                <i class="fa-solid fa-rectangle-list text-lg"></i>
+                <span class="text-[10px] font-medium mt-0.5">Программы</span>
+            </button>
+            <button onclick="window.app.switchTab('exercises')" id="nav-exercises" class="flex flex-col items-center justify-center py-1 text-ios-gray ios-press">
+                <i class="fa-solid fa-dumbbell text-lg"></i>
+                <span class="text-[10px] font-medium mt-0.5">База DDX</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- ==========================================
+         MODALS & iOS ACTION SHEETS
+         ========================================== -->
+
+    <!-- 1. MODAL: ADD / EDIT EXERCISE NAME & MUSCLES -->
+    <div id="modalEditExercise" class="fixed inset-0 z-50 hidden bg-black/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="ios-card w-full max-w-md rounded-t-3xl sm:rounded-3xl p-5 space-y-4 animate-sheet">
+            <div class="flex items-center justify-between border-b border-black/10 dark:border-white/10 pb-3">
+                <button onclick="window.app.closeEditExerciseModal()" class="text-ios-gray text-sm font-medium">Отмена</button>
+                <h3 id="modalEditExerciseTitle" class="font-bold text-sm">Изменить упражнение</h3>
+                <button onclick="window.app.saveExerciseFromModal()" class="text-ios-blue text-sm font-bold">Сохранить</button>
+            </div>
+
+            <div class="space-y-3">
+                <div>
+                    <label class="text-xs text-ios-gray font-medium block mb-1">Категория (группа мышц)</label>
+                    <select id="editExCategory" class="w-full px-3 py-2.5 rounded-xl bg-black/[0.05] dark:bg-white/[0.09] text-sm focus:outline-none">
+                        <option value="Грудные мышцы">Грудные мышцы</option>
+                        <option value="Мышцы спины">Мышцы спины</option>
+                        <option value="Мышцы ног (Бедра, Ягодицы и Голени)">Мышцы ног (Бедра, Ягодицы и Голени)</option>
+                        <option value="Плечи (Дельтовидные мышцы)">Плечи (Дельтовидные мышцы)</option>
+                        <option value="Мышцы рук (Бицепс, Трицепс и Предплечья)">Мышцы рук (Бицепс, Трицепс и Предплечья)</option>
+                        <option value="Мышцы живота (Пресс)">Мышцы живота (Пресс)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="text-xs text-ios-gray font-medium block mb-1">Название упражнения</label>
+                    <input id="editExName" type="text" placeholder="Введите название упражнения..."
+                        class="w-full px-3.5 py-2.5 rounded-xl bg-black/[0.05] dark:bg-white/[0.09] text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-ios-blue/40">
+                </div>
+
+                <div>
+                    <label class="text-xs text-ios-gray font-medium block mb-1">Включающиеся в работу мышцы (мелким шрифтом)</label>
+                    <textarea id="editExMuscles" rows="2" placeholder="Напр.: Грудные мышцы, передние дельты, трицепсы"
+                        class="w-full px-3.5 py-2 rounded-xl bg-black/[0.05] dark:bg-white/[0.09] text-xs focus:outline-none focus:ring-2 focus:ring-ios-blue/40"></textarea>
+                </div>
+
+                <!-- Scope selector when renaming inside a workout or program -->
+                <div id="editExScopeContainer" class="hidden pt-1">
+                    <label class="flex items-center gap-2.5 p-2.5 rounded-xl bg-ios-blue/10 text-xs cursor-pointer">
+                        <input id="editExUpdateGlobalCheck" type="checkbox" checked class="rounded text-ios-blue focus:ring-0">
+                        <span>Также обновить это название в общей <b>Базе DDX</b></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. MODAL: EXERCISE PICKER FOR WORKOUT / PROGRAM -->
+    <div id="modalExercisePicker" class="fixed inset-0 z-50 hidden bg-black/50 backdrop-blur-xs flex items-end sm:items-center justify-center">
+        <div class="ios-card w-full max-w-lg h-[82vh] rounded-t-3xl sm:rounded-3xl flex flex-col overflow-hidden animate-sheet">
+            <div class="p-4 border-b border-black/10 dark:border-white/10 flex items-center justify-between">
+                <h3 class="font-bold text-base">Выбрать упражнение DDX</h3>
+                <button onclick="window.app.closeExercisePicker()" class="w-8 h-8 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center text-ios-gray">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="px-4 pt-3 pb-2 space-y-2 border-b border-black/5 dark:border-white/5">
+                <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-ios-gray text-xs"></i>
+                    <input id="pickerSearchInput" oninput="window.app.renderPickerExercises()" type="text" placeholder="Быстрый поиск упражнения..."
+                        class="w-full pl-8 pr-3 py-2 rounded-xl bg-black/[0.06] dark:bg-white/[0.1] text-sm focus:outline-none">
+                </div>
+                <div id="pickerCategoryPills" class="flex items-center gap-1.5 overflow-x-auto pb-1"></div>
+            </div>
+
+            <div id="pickerExercisesList" class="flex-1 overflow-y-auto p-3.5 space-y-3"></div>
+        </div>
+    </div>
+
+    <!-- 3. MODAL: SELECT SAVED PROGRAM TEMPLATE TO START WORKOUT -->
+    <div id="modalSelectTemplate" class="fixed inset-0 z-50 hidden bg-black/50 backdrop-blur-xs flex items-end sm:items-center justify-center">
+        <div class="ios-card w-full max-w-md max-h-[80vh] rounded-t-3xl sm:rounded-3xl flex flex-col overflow-hidden animate-sheet">
+            <div class="p-4 border-b border-black/10 dark:border-white/10 flex items-center justify-between">
+                <div>
+                    <h3 class="font-bold text-base">Выберите готовую программу</h3>
+                    <p class="text-[11px] text-ios-gray">Вы сможете менять веса и упражнения по ходу тренировки</p>
+                </div>
+                <button onclick="window.app.closeSelectTemplateSheet()" class="w-8 h-8 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center text-ios-gray">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div id="selectTemplateSheetList" class="p-4 overflow-y-auto space-y-2.5"></div>
+        </div>
+    </div>
+
+    <!-- 4. iOS ACTION SHEET: CONFIRM SAVING WORKOUT & TEMPLATE OVERWRITE PROTECTION -->
+    <div id="modalFinishWorkoutConfirm" class="fixed inset-0 z-50 hidden bg-black/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-3">
+        <div class="w-full max-w-md space-y-2 animate-sheet">
+            <div class="ios-card rounded-2xl overflow-hidden divide-y divide-black/10 dark:divide-white/10">
+                <div class="p-4 text-center space-y-1">
+                    <div class="w-10 h-10 rounded-full bg-ios-orange/15 text-ios-orange mx-auto flex items-center justify-center mb-1">
+                        <i class="fa-solid fa-code-branch"></i>
+                    </div>
+                    <h3 class="font-bold text-sm">Программа была изменена на тренировке</h3>
+                    <p id="finishModalDescription" class="text-xs text-ios-gray">
+                        Вы взяли за основу шаблон «Программа» и внесли изменения. Как сохранить результат?
+                    </p>
+                </div>
+
+                <!-- Option 1: Keep Base Template Intact (Default Requested Behavior) -->
+                <button onclick="window.app.finalizeWorkout('history_only')" class="w-full py-3.5 px-4 text-center text-sm font-semibold text-ios-blue hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                    Сохранить только в историю (не менять шаблон)
+                </button>
+
+                <!-- Option 2: Explicitly Confirm Updating Base Program -->
+                <button onclick="window.app.finalizeWorkout('update_template')" class="w-full py-3.5 px-4 text-center text-sm font-semibold text-ios-orange hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                    Подтвердить изменение исходной программы
+                </button>
+
+                <!-- Option 3: Save as Brand New Template -->
+                <button onclick="window.app.finalizeWorkout('save_as_new')" class="w-full py-3.5 px-4 text-center text-sm font-medium text-ios-indigo hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                    Сохранить как новую отдельную программу
+                </button>
+            </div>
+
+            <button onclick="window.app.closeFinishWorkoutModal()" class="ios-card w-full py-3.5 rounded-2xl text-center text-sm font-bold text-ios-gray ios-press">
+                Продолжить тренировку
+            </button>
+        </div>
+    </div>
+
+    <!-- 5. MODAL: ADD / EDIT CLIENT -->
+    <div id="modalClientForm" class="fixed inset-0 z-50 hidden bg-black/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="ios-card w-full max-w-md rounded-t-3xl sm:rounded-3xl p-5 space-y-4 animate-sheet">
+            <div class="flex items-center justify-between border-b border-black/10 dark:border-white/10 pb-3">
+                <button onclick="window.app.closeClientModal()" class="text-ios-gray text-sm font-medium">Отмена</button>
+                <h3 id="modalClientFormTitle" class="font-bold text-sm">Новый подопечный</h3>
+                <button onclick="window.app.saveClientFromModal()" class="text-ios-blue text-sm font-bold">Сохранить</button>
+            </div>
+
+            <div class="space-y-3">
+                <div>
+                    <label class="text-xs text-ios-gray font-medium block mb-1">Имя и Фамилия</label>
+                    <input id="clientFormName" type="text" placeholder="Напр.: Александр Смирнов"
+                        class="w-full px-3.5 py-2.5 rounded-xl bg-black/[0.05] dark:bg-white/[0.09] text-sm font-semibold focus:outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-2.5">
+                    <div>
+                        <label class="text-xs text-ios-gray font-medium block mb-1">Уровень подготовки</label>
+                        <select id="clientFormLevel" class="w-full px-3 py-2.5 rounded-xl bg-black/[0.05] dark:bg-white/[0.09] text-sm focus:outline-none">
+                            <option value="Новичок">Новичок</option>
+                            <option value="Средний">Средний</option>
+                            <option value="Продвинутый">Продвинутый</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-xs text-ios-gray font-medium block mb-1">Телефон / Telegram</label>
+                        <input id="clientFormContact" type="text" placeholder="@username"
+                            class="w-full px-3 py-2.5 rounded-xl bg-black/[0.05] dark:bg-white/[0.09] text-sm focus:outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="text-xs text-ios-gray font-medium block mb-1">Краткая цель / Пожелание</label>
+                    <input id="clientFormGoal" type="text" placeholder="Напр.: Набор мышечной массы, рельеф"
+                        class="w-full px-3.5 py-2.5 rounded-xl bg-black/[0.05] dark:bg-white/[0.09] text-sm focus:outline-none">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. MODAL: CLIENT WORKOUT HISTORY -->
+    <div id="modalClientHistory" class="fixed inset-0 z-50 hidden bg-black/50 backdrop-blur-xs flex items-end sm:items-center justify-center">
+        <div class="ios-card w-full max-w-lg max-h-[82vh] rounded-t-3xl sm:rounded-3xl flex flex-col overflow-hidden animate-sheet">
+            <div class="p-4 border-b border-black/10 dark:border-white/10 flex items-center justify-between">
+                <div>
+                    <h3 id="historyModalTitle" class="font-bold text-base">История тренировок</h3>
+                    <p class="text-[11px] text-ios-gray">Все сохраненные подходы и рабочие веса</p>
+                </div>
+                <button onclick="window.app.closeClientHistoryModal()" class="w-8 h-8 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center text-ios-gray">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div id="clientHistoryModalList" class="p-4 overflow-y-auto space-y-3"></div>
+        </div>
+    </div>
+
+    <!-- iOS Toast Notification -->
+    <div id="iosToast" class="fixed top-16 left-1/2 -translate-x-1/2 z-50 hidden px-4 py-2.5 rounded-2xl bg-black/85 dark:bg-white/90 text-white dark:text-black text-xs font-semibold shadow-lg flex items-center gap-2 transition-all">
+        <i class="fa-solid fa-circle-check text-ios-green"></i>
+        <span id="iosToastText">Сохранено</span>
+    </div>
+
+    <!-- ==========================================
+         APPLICATION LOGIC & TELEGRAM CLOUD SYNC
+         ========================================== -->
+    <script type="module">
+        // Optional Firebase imports for environment cloud persistence alongside Telegram CloudStorage
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // ============================================================================
+        // 1. ALL 39 PRE-LOADED EXERCISES FROM DDX FITNESS WORD FILE
+        // ============================================================================
+        const DEFAULT_DDX_EXERCISES = [
+            // Грудные мышцы
+            { id: 'ddx_1', category: 'Грудные мышцы', name: 'Жим штанги лежа на горизонтальной/наклонной скамье (База)', muscles: 'Грудные мышцы, передние дельтовидные мышцы, трицепсы' },
+            { id: 'ddx_2', category: 'Грудные мышцы', name: 'Жим гантелей на наклонной скамье (База)', muscles: 'Верхняя часть грудных мышц, передние дельты, трицепсы' },
+            { id: 'ddx_3', category: 'Грудные мышцы', name: 'Сведение рук в тренажере Peck-Deck (Бабочка)', muscles: 'Изолированно грудные мышцы (средняя и внутренняя части)' },
+            { id: 'ddx_4', category: 'Грудные мышцы', name: 'Жим от груди в рычажном тренажере (Хаммер)', muscles: 'Грудные мышцы, передние дельты, трицепсы' },
+            { id: 'ddx_5', category: 'Грудные мышцы', name: 'Сведение рук в кроссовере (на верхних или нижних блоках)', muscles: 'Нижняя или верхняя часть грудных мышц (в зависимости от угла)' },
+            { id: 'ddx_6', category: 'Грудные мышцы', name: 'Отжимания на брусьях / в Гравитроне с широкой постановкой', muscles: 'Нижняя часть грудных мышц, трицепсы, передние дельты' },
+
+            // Мышцы спины
+            { id: 'ddx_7', category: 'Мышцы спины', name: 'Становая тяга со штангой (База)', muscles: 'Разгибатели спины, ягодичные мышцы, бицепсы бедра, трапеции, широчайшие мышцы' },
+            { id: 'ddx_8', category: 'Мышцы спины', name: 'Тяга штанги в наклоне к поясу (База)', muscles: 'Широчайшие мышцы, ромбовидные, трапециевидные, задние дельты, бицепсы' },
+            { id: 'ddx_9', category: 'Мышцы спины', name: 'Подтягивания на перекладине / в Гравитроне', muscles: 'Широчайшие мышцы, бицепсы, ромбовидные, большие круглые мышцы' },
+            { id: 'ddx_10', category: 'Мышцы спины', name: 'Тяга верхнего блока к груди', muscles: 'Широчайшие мышцы, бицепсы, задние дельтовидные мышцы' },
+            { id: 'ddx_11', category: 'Мышцы спины', name: 'Тяга нижнего блока к поясу сидя (гребля)', muscles: 'Широчайшие мышцы, ромбовидные мышцы, средняя часть трапеции, бицепсы' },
+            { id: 'ddx_12', category: 'Мышцы спины', name: 'Тяга в рычажном тренажере (Хаммер) на спину', muscles: 'Широчайшие мышцы, ромбовидные мышцы, бицепсы' },
+            { id: 'ddx_13', category: 'Мышцы спины', name: 'Гиперэкстензия в римском стуле', muscles: 'Разгибатели позвоночника, ягодичные мышцы, бицепсы бедра' },
+
+            // Мышцы ног (Бедра, Ягодицы и Голени)
+            { id: 'ddx_14', category: 'Мышцы ног (Бедра, Ягодицы и Голени)', name: 'Приседания со штангой на плечах (База)', muscles: 'Квадрицепсы, ягодичные мышцы, бицепсы бедра, мышцы кора' },
+            { id: 'ddx_15', category: 'Мышцы ног (Бедра, Ягодицы и Голени)', name: 'Румынская (мертвая) тяга со штангой (База)', muscles: 'Бицепсы бедра, ягодичные мышцы, разгибатели спины' },
+            { id: 'ddx_16', category: 'Мышцы ног (Бедра, Ягодицы и Голени)', name: 'Жим ногами в платформенном тренажере', muscles: 'Квадрицепсы, ягодичные мышцы, бицепсы бедра' },
+            { id: 'ddx_17', category: 'Мышцы ног (Бедра, Ягодицы и Голени)', name: 'Приседания в Гакк-машине (Hack Squat)', muscles: 'Квадрицепсы (с акцентом на переднюю поверхность бедра), ягодичные мышцы' },
+            { id: 'ddx_18', category: 'Мышцы ног (Бедра, Ягодицы и Голени)', name: 'Приседания в тренажере Смита', muscles: 'Квадрицепсы, ягодичные мышцы' },
+            { id: 'ddx_19', category: 'Мышцы ног (Бедра, Ягодицы и Голени)', name: 'Разгибание ног в тренажере сидя', muscles: 'Квадрицепсы (четырехглавая мышца бедра) - изолированно' },
+            { id: 'ddx_20', category: 'Мышцы ног (Бедра, Ягодицы и Голени)', name: 'Сгибание ног в тренажере (лежа или сидя)', muscles: 'Задняя поверхность бедра (бицепс бедра) - изолированно' },
+            { id: 'ddx_21', category: 'Мышцы ног (Бедра, Ягодицы и Голени)', name: 'Сведение и разведение ног в тренажере сидя', muscles: 'Приводящие мышцы (внутренняя часть), средние и малые ягодичные (внешняя часть)' },
+            { id: 'ddx_22', category: 'Мышцы ног (Бедра, Ягодицы и Голени)', name: 'Подъемы на носки в тренажере стоя/сидя', muscles: 'Икроножные и камбаловидные мышцы' },
+
+            // Плечи (Дельтовидные мышцы)
+            { id: 'ddx_23', category: 'Плечи (Дельтовидные мышцы)', name: 'Армейский жим / Жим штанги или гантелей стоя (База)', muscles: 'Передние и средние пучки дельтовидных мышц, трицепсы' },
+            { id: 'ddx_24', category: 'Плечи (Дельтовидные мышцы)', name: 'Жим вверх сидя в рычажном тренажере (Хаммер)', muscles: 'Передние и средние дельтовидные мышцы, трицепсы' },
+            { id: 'ddx_25', category: 'Плечи (Дельтовидные мышцы)', name: 'Махи (разведения) гантелей в стороны стоя (База)', muscles: 'Средние пучки дельтовидных мышц' },
+            { id: 'ddx_26', category: 'Плечи (Дельтовидные мышцы)', name: 'Отведения рук назад в тренажере (Обратная бабочка)', muscles: 'Задние пучки дельтовидных мышц, ромбовидные мышцы спины' },
+            { id: 'ddx_27', category: 'Плечи (Дельтовидные мышцы)', name: 'Тяга нижнего блока кроссовера перед собой (на переднюю дельту)', muscles: 'Передние пучки дельтовидных мышц' },
+            { id: 'ddx_28', category: 'Плечи (Дельтовидные мышцы)', name: 'Тяга каната к лицу (Face pull) в верхнем блоке', muscles: 'Задние дельты, трапециевидные и ромбовидные мышцы' },
+
+            // Мышцы рук (Бицепс, Трицепс и Предплечья)
+            { id: 'ddx_29', category: 'Мышцы рук (Бицепс, Трицепс и Предплечья)', name: 'Подъем штанги / гантелей на бицепс (База)', muscles: 'Двуглавая мышца плеча (бицепс), мышцы предплечья' },
+            { id: 'ddx_30', category: 'Мышцы рук (Бицепс, Трицепс и Предплечья)', name: 'Сгибание рук на бицепс в нижнем блоке кроссовера', muscles: 'Двуглавая мышца плеча (бицепс) - постоянное натяжение' },
+            { id: 'ddx_31', category: 'Мышцы рук (Бицепс, Трицепс и Предплечья)', name: 'Сгибание рук в изолирующем тренажере на бицепс (пюпитр)', muscles: 'Изолированно бицепс (преимущественно короткая головка)' },
+            { id: 'ddx_32', category: 'Мышцы рук (Бицепс, Трицепс и Предплечья)', name: 'Французский жим лежа с EZ-штангой (База)', muscles: 'Трицепс (все три головки)' },
+            { id: 'ddx_33', category: 'Мышцы рук (Бицепс, Трицепс и Предплечья)', name: 'Разгибание рук на трицепс в верхнем блоке (с канатом или прямой рукоятью)', muscles: 'Трицепс (преимущественно латеральная и медиальная головки)' },
+            { id: 'ddx_34', category: 'Мышцы рук (Бицепс, Трицепс и Предплечья)', name: 'Разгибание рук в тренажере на трицепс', muscles: 'Трицепс - изолированно' },
+
+            // Мышцы живота (Пресс)
+            { id: 'ddx_35', category: 'Мышцы живота (Пресс)', name: 'Скручивания на полу или наклонной скамье (База)', muscles: 'Прямая мышца живота' },
+            { id: 'ddx_36', category: 'Мышцы живота (Пресс)', name: 'Подъем ног в висе (или с упором на локти в тренажере)', muscles: 'Нижний отдел прямой мышцы живота, подвздошно-поясничные мышцы' },
+            { id: 'ddx_37', category: 'Мышцы живота (Пресс)', name: 'Скручивания в грузоблочном тренажере на пресс', muscles: 'Прямая мышца живота (с сопротивлением)' },
+            { id: 'ddx_38', category: 'Мышцы живота (Пресс)', name: "Скручивания на верхнем блоке кроссовера ('Молитва')", muscles: 'Прямая мышца живота, косые мышцы' },
+            { id: 'ddx_39', category: 'Мышцы живота (Пресс)', name: 'Планка (База)', muscles: 'Поперечная мышца живота, прямая мышца живота, мышцы кора (в статике)' }
+        ];
+
+        // Pre-populated Clients with Detailed Notes
+        const DEFAULT_CLIENTS = [
+            {
+                id: 'client_1',
+                name: 'Артем Ковалев',
+                level: 'Средний',
+                contact: '@artem_kov',
+                metrics: '84 кг / 182 см',
+                split: 'Верх / Низ (3 раза в нед.)',
+                goals: 'Увеличить силовые в жиме лежа и подтягиваниях, набрать сухую мышечную массу плечевого пояса.',
+                health: 'Небольшой дискомфорт в правом плече при жиме из-за головы — заменяем на Хаммер.',
+                freeformPad: 'Отлично реагирует на пирамиду по весам в базовых упражнениях.\nВ рычажном тренажере DDX Хаммер ставить сиденье на деление 4.',
+                quickNotes: [
+                    { id: 'qn_1', date: '10.11.2026', text: 'Взял 80 кг на 8 повторений в жиме лежа без помощи' },
+                    { id: 'qn_2', date: '05.11.2026', text: 'Просит добавить больше упражнений на заднюю дельту' }
+                ]
+            },
+            {
+                id: 'client_2',
+                name: 'Екатерина Смирнова',
+                level: 'Новичок',
+                contact: '@kate_smirnova',
+                metrics: '59 кг / 168 см',
+                split: 'Фулбади DDX (2-3 раза в нед.)',
+                goals: 'Акцент на ягодичные и заднюю поверхность бедра, общий тонус, укрепление спины и осанки.',
+                health: 'Исключить классическую становую тягу, делаем румынскую с гантелями/штангой и жим платформой.',
+                freeformPad: 'Следить за положением коленей в Гакк-машине.\nПредпочитает умеренный темп и отдых 90 секунд между подходами.',
+                quickNotes: [
+                    { id: 'qn_3', date: '09.11.2026', text: 'Освоила технику румынской тяги, спину держит идеально ровно' }
+                ]
+            }
+        ];
+
+        // Pre-populated Reusable Workout Templates
+        const DEFAULT_PROGRAMS = [
+            {
+                id: 'prog_1',
+                title: 'Верх тела DDX (Грудь + Спина + Плечи)',
+                description: 'Базовый сплит со свободными весами и рычажными тренажерами Хаммер',
+                updatedAt: '10.11.2026',
+                exercises: [
+                    {
+                        uid: 'pe_1',
+                        exerciseId: 'ddx_1',
+                        name: 'Жим штанги лежа на горизонтальной/наклонной скамье (База)',
+                        muscles: 'Грудные мышцы, передние дельтовидные мышцы, трицепсы',
+                        sets: [
+                            { weight: '60', reps: '12', done: false },
+                            { weight: '70', reps: '10', done: false },
+                            { weight: '75', reps: '8', done: false }
+                        ]
+                    },
+                    {
+                        uid: 'pe_2',
+                        exerciseId: 'ddx_10',
+                        name: 'Тяга верхнего блока к груди',
+                        muscles: 'Широчайшие мышцы, бицепсы, задние дельтовидные мышцы',
+                        sets: [
+                            { weight: '55', reps: '12', done: false },
+                            { weight: '60', reps: '10', done: false },
+                            { weight: '60', reps: '10', done: false }
+                        ]
+                    },
+                    {
+                        uid: 'pe_3',
+                        exerciseId: 'ddx_4',
+                        name: 'Жим от груди в рычажном тренажере (Хаммер)',
+                        muscles: 'Грудные мышцы, передние дельты, трицепсы',
+                        sets: [
+                            { weight: '40', reps: '12', done: false },
+                            { weight: '50', reps: '10', done: false },
+                            { weight: '50', reps: '10', done: false }
+                        ]
+                    },
+                    {
+                        uid: 'pe_4',
+                        exerciseId: 'ddx_28',
+                        name: 'Тяга каната к лицу (Face pull) в верхнем блоке',
+                        muscles: 'Задние дельты, трапециевидные и ромбовидные мышцы',
+                        sets: [
+                            { weight: '25', reps: '15', done: false },
+                            { weight: '30', reps: '15', done: false },
+                            { weight: '30', reps: '12', done: false }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'prog_2',
+                title: 'День ног и Ягодиц DDX (Акцент Бедра)',
+                description: 'Приседания, Румынская тяга и тренажеры DDX Fitness',
+                updatedAt: '09.11.2026',
+                exercises: [
+                    {
+                        uid: 'pe_5',
+                        exerciseId: 'ddx_16',
+                        name: 'Жим ногами в платформенном тренажере',
+                        muscles: 'Квадрицепсы, ягодичные мышцы, бицепсы бедра',
+                        sets: [
+                            { weight: '100', reps: '15', done: false },
+                            { weight: '120', reps: '12', done: false },
+                            { weight: '140', reps: '10', done: false }
+                        ]
+                    },
+                    {
+                        uid: 'pe_6',
+                        exerciseId: 'ddx_15',
+                        name: 'Румынская (мертвая) тяга со штангой (База)',
+                        muscles: 'Бицепсы бедра, ягодичные мышцы, разгибатели спины',
+                        sets: [
+                            { weight: '50', reps: '12', done: false },
+                            { weight: '60', reps: '10', done: false },
+                            { weight: '60', reps: '10', done: false }
+                        ]
+                    },
+                    {
+                        uid: 'pe_7',
+                        exerciseId: 'ddx_20',
+                        name: 'Сгибание ног в тренажере (лежа или сидя)',
+                        muscles: 'Задняя поверхность бедра (бицепс бедра) - изолированно',
+                        sets: [
+                            { weight: '35', reps: '15', done: false },
+                            { weight: '40', reps: '12', done: false },
+                            { weight: '40', reps: '12', done: false }
+                        ]
+                    },
+                    {
+                        uid: 'pe_8',
+                        exerciseId: 'ddx_21',
+                        name: 'Сведение и разведение ног в тренажере сидя',
+                        muscles: 'Приводящие мышцы (внутренняя часть), средние и малые ягодичные (внешняя часть)',
+                        sets: [
+                            { weight: '45', reps: '15', done: false },
+                            { weight: '50', reps: '15', done: false },
+                            { weight: '50', reps: '15', done: false }
+                        ]
+                    }
+                ]
+            }
+        ];
+
+        // ============================================================================
+        // 2. PERSONAL TELEGRAM ACCOUNT CLOUD STORAGE + FIRESTORE ENGINE
+        // ============================================================================
+        class TrainerPersonalStorage {
+            constructor() {
+                this.tg = window.Telegram?.WebApp;
+                this.tgUser = this.tg?.initDataUnsafe?.user || null;
+                this.trainerNamespace = this.tgUser?.id ? `tg_trainer_${this.tgUser.id}` : 'tg_trainer_personal';
+                this.db = null;
+                this.auth = null;
+                this.firebaseUser = null;
+                this.appId = typeof __app_id !== 'undefined' ? __app_id : 'trainer-pro-ddx-ios';
+            }
+
+            async init() {
+                // Initialize Telegram Mini App viewport & header
+                if (this.tg) {
+                    try {
+                        this.tg.ready();
+                        this.tg.expand();
+                    } catch (e) {
+                        console.warn('TG WebApp init warning:', e);
+                    }
+                }
+
+                // Update top bar with personal Telegram trainer name
+                const tgLabel = document.getElementById('tgUserLabel');
+                if (this.tgUser && tgLabel) {
+                    const fullName = [this.tgUser.first_name, this.tgUser.last_name].filter(Boolean).join(' ');
+                    tgLabel.textContent = `${fullName} (ID: ${this.tgUser.id})`;
+                }
+
+                // Initialize Firestore if available in the environment
+                if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+                    try {
+                        const firebaseConfig = JSON.parse(__firebase_config);
+                        const app = initializeApp(firebaseConfig);
+                        this.db = getFirestore(app);
+                        this.auth = getAuth(app);
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            const cred = await signInWithCustomToken(this.auth, __initial_auth_token);
+                            this.firebaseUser = cred.user;
+                        } else {
+                            const cred = await signInAnonymously(this.auth);
+                            this.firebaseUser = cred.user;
+                        }
+                    } catch (err) {
+                        console.warn('Firestore optional init skipped:', err);
+                    }
+                }
+            }
+
+            // Save state to Telegram CloudStorage (chunked for >4KB payloads) and Firestore
+            async saveState(stateObj) {
+                const payloadStr = JSON.stringify(stateObj);
+                let savedToCloud = false;
+
+                // 1. Telegram CloudStorage (Strictly bound to the Trainer's personal Telegram account)
+                if (this.tg?.CloudStorage && this.tg.isVersionAtLeast && this.tg.isVersionAtLeast('6.9')) {
+                    try {
+                        await this.saveToTelegramCloudChunked(this.trainerNamespace, payloadStr);
+                        savedToCloud = true;
+                    } catch (e) {
+                        console.warn('Telegram CloudStorage error:', e);
+                    }
+                }
+
+                // 2. Firestore Private User Collection (Rule 1 & Rule 3 compliant)
+                if (this.db && this.firebaseUser) {
+                    try {
+                        const docRef = doc(this.db, 'artifacts', this.appId, 'users', this.firebaseUser.uid, 'trainerData', this.trainerNamespace);
+                        await setDoc(docRef, {
+                            payload: payloadStr,
+                            updatedAt: Date.now()
+                        });
+                        savedToCloud = true;
+                    } catch (e) {
+                        console.warn('Firestore save warning:', e);
+                    }
+                }
+
+                return savedToCloud;
+            }
+
+            async loadState() {
+                // 1. Try Telegram CloudStorage first
+                if (this.tg?.CloudStorage && this.tg.isVersionAtLeast && this.tg.isVersionAtLeast('6.9')) {
+                    try {
+                        const tgStr = await this.loadFromTelegramCloudChunked(this.trainerNamespace);
+                        if (tgStr) return JSON.parse(tgStr);
+                    } catch (e) {
+                        console.warn('Telegram CloudStorage load error:', e);
+                    }
+                }
+
+                // 2. Try Firestore Private User Collection
+                if (this.db && this.firebaseUser) {
+                    try {
+                        const docRef = doc(this.db, 'artifacts', this.appId, 'users', this.firebaseUser.uid, 'trainerData', this.trainerNamespace);
+                        const snap = await getDoc(docRef);
+                        if (snap.exists() && snap.data()?.payload) {
+                            return JSON.parse(snap.data().payload);
+                        }
+                    } catch (e) {
+                        console.warn('Firestore load warning:', e);
+                    }
+                }
+
+                return null;
+            }
+
+            saveToTelegramCloudChunked(baseKey, str) {
+                const chunkSize = 3500;
+                const totalChunks = Math.ceil(str.length / chunkSize);
+                const promises = [];
+
+                promises.push(new Promise((res) => {
+                    this.tg.CloudStorage.setItem(`${baseKey}_meta`, String(totalChunks), () => res());
+                }));
+
+                for (let i = 0; i < totalChunks; i++) {
+                    const part = str.slice(i * chunkSize, (i + 1) * chunkSize);
+                    promises.push(new Promise((res) => {
+                        this.tg.CloudStorage.setItem(`${baseKey}_${i}`, part, () => res());
+                    }));
+                }
+                return Promise.all(promises);
+            }
+
+            loadFromTelegramCloudChunked(baseKey) {
+                return new Promise((resolve) => {
+                    this.tg.CloudStorage.getItem(`${baseKey}_meta`, (err, countStr) => {
+                        if (err || !countStr) return resolve(null);
+                        const total = parseInt(countStr, 10);
+                        if (!total || isNaN(total)) return resolve(null);
+                        const keys = Array.from({ length: total }, (_, idx) => `${baseKey}_${idx}`);
+                        this.tg.CloudStorage.getItems(keys, (err2, values) => {
+                            if (err2 || !values) return resolve(null);
+                            let full = '';
+                            for (let i = 0; i < total; i++) {
+                                full += (values[`${baseKey}_${i}`] || '');
+                            }
+                            resolve(full || null);
+                        });
+                    });
+                });
+            }
+        }
+
+        // ============================================================================
+        // 3. MAIN APPLICATION CONTROLLER
+        // ============================================================================
+        class TrainerProApp {
+            constructor() {
+                this.storage = new TrainerPersonalStorage();
+                this.state = {
+                    darkMode: false,
+                    exercises: JSON.parse(JSON.stringify(DEFAULT_DDX_EXERCISES)),
+                    clients: JSON.parse(JSON.stringify(DEFAULT_CLIENTS)),
+                    programs: JSON.parse(JSON.stringify(DEFAULT_PROGRAMS)),
+                    workoutHistory: [
+                        {
+                            id: 'wh_demo_1',
+                            date: '08.11.2026, 18:30',
+                            clientId: 'client_1',
+                            clientName: 'Артем Ковалев',
+                            title: 'Верх тела DDX (Грудь + Спина + Плечи)',
+                            duration: '52 мин',
+                            comment: 'Отличная тренировка, увеличили вес в Хаммере на 5 кг.',
+                            exercises: JSON.parse(JSON.stringify(DEFAULT_PROGRAMS[0].exercises))
+                        }
+                    ],
+                    activeWorkout: null
+                };
+
+                // UI navigation & filter state
+                this.currentTab = 'clients';
+                this.selectedCategoryFilter = 'Все';
+                this.pickerCategoryFilter = 'Все';
+                this.pickerContext = 'workout'; // 'workout' | 'program'
+                this.editingClientId = null;
+                this.activeNotesClientId = null;
+                this.editingProgramDraft = null;
+                this.editingExerciseTarget = null; // { mode: 'catalog'|'workout'|'program', exerciseId, workoutExUid }
+                this.timerInterval = null;
+                this.saveDebounceTimer = null;
+            }
+
+            async init() {
+                await this.storage.init();
+                const cloudData = await this.storage.loadState();
+                if (cloudData) {
+                    this.state = {
+                        ...this.state,
+                        ...cloudData,
+                        exercises: cloudData.exercises?.length ? cloudData.exercises : JSON.parse(JSON.stringify(DEFAULT_DDX_EXERCISES))
+                    };
+                }
+
+                if (this.state.darkMode) {
+                    document.documentElement.classList.add('dark');
+                }
+                this.updateThemeIcon();
+                this.renderAll();
+                this.startTimerLoop();
+            }
+
+            haptic(type = 'light') {
+                try {
+                    const hf = window.Telegram?.WebApp?.HapticFeedback;
+                    if (hf) {
+                        if (type === 'success' || type === 'warning' || type === 'error') {
+                            hf.notificationOccurred(type);
+                        } else {
+                            hf.impactOccurred(type);
+                        }
+                    }
+                } catch (e) {}
+            }
+
+            showToast(message) {
+                const toast = document.getElementById('iosToast');
+                const text = document.getElementById('iosToastText');
+                if (!toast || !text) return;
+                text.textContent = message;
+                toast.classList.remove('hidden');
+                clearTimeout(this.toastTimeout);
+                this.toastTimeout = setTimeout(() => {
+                    toast.classList.add('hidden');
+                }, 2300);
+            }
+
+            scheduleSave() {
+                const syncText = document.getElementById('syncStatusText');
+                if (syncText) syncText.textContent = 'Сохранение...';
+
+                clearTimeout(this.saveDebounceTimer);
+                this.saveDebounceTimer = setTimeout(async () => {
+                    await this.storage.saveState(this.state);
+                    if (syncText) syncText.textContent = 'Сохранено в TG';
+                }, 350);
+            }
+
+            async manualCloudSync() {
+                this.haptic('light');
+                await this.storage.saveState(this.state);
+                this.showToast('Синхронизировано с вашим аккаунтом Telegram');
+            }
+
+            toggleTheme() {
+                this.haptic('light');
+                this.state.darkMode = !this.state.darkMode;
+                document.documentElement.classList.toggle('dark', this.state.darkMode);
+                this.updateThemeIcon();
+                this.scheduleSave();
+            }
+
+            updateThemeIcon() {
+                const icon = document.getElementById('themeIcon');
+                if (!icon) return;
+                icon.className = this.state.darkMode ? 'fa-solid fa-sun text-amber-400 text-xs' : 'fa-solid fa-moon text-xs';
+            }
+
+            // ============================================================================
+            // NAVIGATION & TABS
+            // ============================================================================
+            switchTab(tabName) {
+                this.haptic('light');
+                this.currentTab = tabName;
+
+                // Hide subviews
+                document.getElementById('view-client-notes').classList.add('hidden');
+                document.getElementById('view-program-editor').classList.add('hidden');
+
+                const tabs = ['clients', 'workout', 'programs', 'exercises'];
+                const titles = {
+                    clients: 'Подопечные',
+                    workout: 'Тренировка',
+                    programs: 'Программы DDX',
+                    exercises: 'База упражнений DDX'
+                };
+
+                tabs.forEach(t => {
+                    const sec = document.getElementById(`tab-${t}`);
+                    const navBtn = document.getElementById(`nav-${t}`);
+                    if (t === tabName) {
+                        sec.classList.remove('hidden');
+                        navBtn.classList.remove('text-ios-gray');
+                        navBtn.classList.add('text-ios-blue');
+                    } else {
+                        sec.classList.add('hidden');
+                        navBtn.classList.remove('text-ios-blue');
+                        navBtn.classList.add('text-ios-gray');
+                    }
+                });
+
+                document.getElementById('headerTitle').textContent = titles[tabName] || 'Trainer Pro';
+                this.renderAll();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
+            renderAll() {
+                this.renderStats();
+                this.renderClients();
+                this.renderWorkoutTab();
+                this.renderPrograms();
+                this.renderExercisesCatalog();
+            }
+
+            renderStats() {
+                document.getElementById('statClientsCount').textContent = this.state.clients.length;
+                document.getElementById('statProgramsCount').textContent = this.state.programs.length;
+                document.getElementById('statWorkoutsCount').textContent = this.state.workoutHistory.length;
+
+                const dot = document.getElementById('navWorkoutDot');
+                if (dot) {
+                    dot.classList.toggle('hidden', !this.state.activeWorkout);
+                }
+            }
+
+            // ============================================================================
+            // TAB 1: CLIENTS & DEDICATED CLIENT NOTES WINDOW (ОКНО С ЗАПИСКАМИ)
+            // ============================================================================
+            renderClients() {
+                const container = document.getElementById('clientsListContainer');
+                const query = (document.getElementById('clientSearchInput')?.value || '').trim().toLowerCase();
+
+                const filtered = this.state.clients.filter(c =>
+                    c.name.toLowerCase().includes(query) ||
+                    (c.goals || '').toLowerCase().includes(query) ||
+                    (c.level || '').toLowerCase().includes(query)
+                );
+
+                if (filtered.length === 0) {
+                    container.innerHTML = `
+                        <div class="ios-card p-6 text-center text-ios-gray text-sm">
+                            Подопечные не найдены. Нажмите «Добавить», чтобы создать карточку клиента.
+                        </div>
+                    `;
+                    return;
+                }
+
+                const levelBadgeColors = {
+                    'Новичок': 'bg-ios-green/15 text-ios-green',
+                    'Средний': 'bg-ios-blue/15 text-ios-blue',
+                    'Продвинутый': 'bg-ios-purple/15 text-ios-purple'
+                };
+
+                container.innerHTML = filtered.map(client => {
+                    const badgeClass = levelBadgeColors[client.level] || 'bg-ios-blue/15 text-ios-blue';
+                    const clientWorkoutsCount = this.state.workoutHistory.filter(w => w.clientId === client.id).length;
+                    const notesCount = (client.quickNotes?.length || 0) + (client.freeformPad ? 1 : 0);
+
+                    return `
+                        <div class="ios-card p-4 space-y-3">
+                            <div class="flex items-start justify-between gap-2">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-ios-blue/20 to-ios-indigo/20 text-ios-blue flex items-center justify-center font-bold text-base shrink-0">
+                                        ${this.escapeHtml(client.name.slice(0, 2).toUpperCase())}
+                                    </div>
+                                    <div>
+                                        <div class="flex items-center gap-2 flex-wrap">
+                                            <h3 class="font-bold text-[15px] leading-snug">${this.escapeHtml(client.name)}</h3>
+                                            <span class="px-2 py-0.5 rounded-md text-[10px] font-bold ${badgeClass}">
+                                                ${this.escapeHtml(client.level || 'Средний')}
+                                            </span>
+                                        </div>
+                                        <p class="text-xs text-ios-gray mt-0.5 line-clamp-1">
+                                            ${this.escapeHtml(client.goals || 'Цели и пожелания в заметках')}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-1">
+                                    <button onclick="window.app.openClientModal('${client.id}')" class="w-8 h-8 rounded-lg text-ios-gray hover:text-ios-blue flex items-center justify-center ios-press" title="Редактировать">
+                                        <i class="fa-solid fa-pen text-xs"></i>
+                                    </button>
+                                    <button onclick="window.app.deleteClient('${client.id}')" class="w-8 h-8 rounded-lg text-ios-gray hover:text-ios-red flex items-center justify-center ios-press" title="Удалить">
+                                        <i class="fa-regular fa-trash-can text-xs"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            ${client.health ? `
+                                <div class="px-2.5 py-1.5 rounded-lg bg-ios-red/10 text-ios-red text-[11px] flex items-center gap-1.5">
+                                    <i class="fa-solid fa-heart-pulse"></i>
+                                    <span class="line-clamp-1"><b>Ограничения:</b> ${this.escapeHtml(client.health)}</span>
+                                </div>
+                            ` : ''}
+
+                            <!-- Action Buttons Row: ЗАМЕТКИ, ТРЕНИРОВКА, ИСТОРИЯ -->
+                            <div class="grid grid-cols-3 gap-2 pt-1 border-t border-black/5 dark:border-white/10">
+                                <button onclick="window.app.openClientNotes('${client.id}')"
+                                    class="py-2 px-2.5 rounded-xl bg-amber-500/15 text-amber-700 dark:text-amber-300 font-semibold text-xs flex items-center justify-center gap-1.5 ios-press">
+                                    <i class="fa-solid fa-note-sticky"></i>
+                                    <span>Заметки (${notesCount})</span>
+                                </button>
+
+                                <button onclick="window.app.quickStartWorkoutForClient('${client.id}')"
+                                    class="py-2 px-2.5 rounded-xl bg-ios-blue text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow-xs ios-press">
+                                    <i class="fa-solid fa-play text-[10px]"></i>
+                                    <span>Тренировка</span>
+                                </button>
+
+                                <button onclick="window.app.openClientHistoryModal('${client.id}')"
+                                    class="py-2 px-2.5 rounded-xl bg-black/[0.05] dark:bg-white/[0.08] font-medium text-xs flex items-center justify-center gap-1.5 ios-press">
+                                    <i class="fa-solid fa-clock-rotate-left text-ios-gray"></i>
+                                    <span>История (${clientWorkoutsCount})</span>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            // Open Dedicated Client Notes Window
+            openClientNotes(clientId) {
+                this.haptic('light');
+                const client = this.state.clients.find(c => c.id === clientId);
+                if (!client) return;
+
+                this.activeNotesClientId = clientId;
+
+                // Hide main tabs & show notes window
+                ['clients', 'workout', 'programs', 'exercises'].forEach(t => {
+                    document.getElementById(`tab-${t}`).classList.add('hidden');
+                });
+                document.getElementById('view-client-notes').classList.remove('hidden');
+                document.getElementById('headerTitle').textContent = 'Записки о подопечном';
+
+                // Populate fields
+                document.getElementById('notesClientName').textContent = client.name;
+                document.getElementById('notesClientMetrics').value = client.metrics || '';
+                document.getElementById('notesClientSplit').value = client.split || '';
+                document.getElementById('notesClientGoals').value = client.goals || '';
+                document.getElementById('notesClientHealth').value = client.health || '';
+                document.getElementById('notesFreeformPad').value = client.freeformPad || '';
+
+                this.highlightNotesLevelButton(client.level || 'Средний');
+                this.renderClientQuickNotes();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
+            highlightNotesLevelButton(level) {
+                const buttons = document.querySelectorAll('#notesLevelSegment button');
+                buttons.forEach(btn => {
+                    if (btn.dataset.level === level) {
+                        btn.className = 'py-1.5 rounded-lg text-xs font-bold bg-white dark:bg-ios-darkElevated text-ios-blue shadow-xs transition-all';
+                    } else {
+                        btn.className = 'py-1.5 rounded-lg text-xs font-medium text-ios-gray transition-all';
+                    }
+                });
+            }
+
+            setClientNotesLevel(level) {
+                this.haptic('light');
+                const client = this.state.clients.find(c => c.id === this.activeNotesClientId);
+                if (!client) return;
+                client.level = level;
+                this.highlightNotesLevelButton(level);
+                this.saveClientNotesProfile(false);
+            }
+
+            saveClientNotesProfile(closeAfter = false) {
+                const client = this.state.clients.find(c => c.id === this.activeNotesClientId);
+                if (!client) return;
+
+                client.metrics = document.getElementById('notesClientMetrics').value;
+                client.split = document.getElementById('notesClientSplit').value;
+                client.goals = document.getElementById('notesClientGoals').value;
+                client.health = document.getElementById('notesClientHealth').value;
+                client.freeformPad = document.getElementById('notesFreeformPad').value;
+
+                const badge = document.getElementById('notesAutoSaveBadge');
+                if (badge) {
+                    badge.textContent = 'Сохранено ✓';
+                }
+
+                this.scheduleSave();
+
+                if (closeAfter) {
+                    this.showToast('Заметки о подопечном сохранены');
+                    this.closeClientNotes();
+                }
+            }
+
+            addClientQuickNote() {
+                const input = document.getElementById('quickNoteInput');
+                const text = (input?.value || '').trim();
+                if (!text) return;
+
+                const client = this.state.clients.find(c => c.id === this.activeNotesClientId);
+                if (!client) return;
+
+                if (!client.quickNotes) client.quickNotes = [];
+                const now = new Date();
+                const dateStr = now.toLocaleDateString('ru-RU');
+
+                client.quickNotes.unshift({
+                    id: 'qn_' + Date.now(),
+                    date: dateStr,
+                    text
+                });
+
+                input.value = '';
+                this.haptic('success');
+                this.renderClientQuickNotes();
+                this.scheduleSave();
+            }
+
+            deleteClientQuickNote(noteId) {
+                const client = this.state.clients.find(c => c.id === this.activeNotesClientId);
+                if (!client || !client.quickNotes) return;
+                client.quickNotes = client.quickNotes.filter(n => n.id !== noteId);
+                this.renderClientQuickNotes();
+                this.scheduleSave();
+            }
+
+            renderClientQuickNotes() {
+                const container = document.getElementById('clientQuickNotesList');
+                const client = this.state.clients.find(c => c.id === this.activeNotesClientId);
+                if (!container || !client) return;
+
+                const notes = client.quickNotes || [];
+                if (notes.length === 0) {
+                    container.innerHTML = `<div class="text-xs text-ios-gray py-2">Пока нет быстрых датированных заметок.</div>`;
+                    return;
+                }
+
+                container.innerHTML = notes.map(n => `
+                    <div class="p-2.5 rounded-xl bg-black/[0.03] dark:bg-white/[0.06] flex items-start justify-between gap-2">
+                        <div class="text-xs">
+                            <span class="font-bold text-ios-blue mr-1.5">${this.escapeHtml(n.date)}:</span>
+                            <span>${this.escapeHtml(n.text)}</span>
+                        </div>
+                        <button onclick="window.app.deleteClientQuickNote('${n.id}')" class="text-ios-gray hover:text-ios-red text-xs px-1">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                `).join('');
+            }
+
+            closeClientNotes() {
+                document.getElementById('view-client-notes').classList.add('hidden');
+                this.switchTab(this.currentTab === 'workout' ? 'workout' : 'clients');
+            }
+
+            openClientModal(clientId = null) {
+                this.haptic('light');
+                this.editingClientId = clientId;
+                const client = clientId ? this.state.clients.find(c => c.id === clientId) : null;
+
+                document.getElementById('modalClientFormTitle').textContent = client ? 'Редактировать профиль' : 'Новый подопечный';
+                document.getElementById('clientFormName').value = client ? client.name : '';
+                document.getElementById('clientFormLevel').value = client ? (client.level || 'Средний') : 'Новичок';
+                document.getElementById('clientFormContact').value = client ? (client.contact || '') : '';
+                document.getElementById('clientFormGoal').value = client ? (client.goals || '') : '';
+
+                document.getElementById('modalClientForm').classList.remove('hidden');
+            }
+
+            closeClientModal() {
+                document.getElementById('modalClientForm').classList.add('hidden');
+            }
+
+            saveClientFromModal() {
+                const name = document.getElementById('clientFormName').value.trim();
+                if (!name) {
+                    this.showToast('Введите имя подопечного');
+                    return;
+                }
+                const level = document.getElementById('clientFormLevel').value;
+                const contact = document.getElementById('clientFormContact').value.trim();
+                const goals = document.getElementById('clientFormGoal').value.trim();
+
+                if (this.editingClientId) {
+                    const c = this.state.clients.find(x => x.id === this.editingClientId);
+                    if (c) {
+                        c.name = name;
+                        c.level = level;
+                        c.contact = contact;
+                        c.goals = goals;
+                    }
+                } else {
+                    this.state.clients.unshift({
+                        id: 'client_' + Date.now(),
+                        name,
+                        level,
+                        contact,
+                        goals,
+                        metrics: '',
+                        split: '',
+                        health: '',
+                        freeformPad: '',
+                        quickNotes: []
+                    });
+                }
+
+                this.haptic('success');
+                this.closeClientModal();
+                this.renderAll();
+                this.scheduleSave();
+                this.showToast('Профиль подопечного сохранен');
+            }
+
+            deleteClient(clientId) {
+                this.haptic('warning');
+                this.state.clients = this.state.clients.filter(c => c.id !== clientId);
+                this.renderAll();
+                this.scheduleSave();
+                this.showToast('Подопечный удален');
+            }
+
+            openClientHistoryModal(clientId) {
+                this.haptic('light');
+                const client = this.state.clients.find(c => c.id === clientId);
+                const listEl = document.getElementById('clientHistoryModalList');
+                document.getElementById('historyModalTitle').textContent = client ? `История: ${client.name}` : 'История тренировок';
+
+                const items = this.state.workoutHistory.filter(w => w.clientId === clientId);
+                if (items.length === 0) {
+                    listEl.innerHTML = `<div class="p-6 text-center text-xs text-ios-gray">У этого подопечного пока нет завершенных тренировок.</div>`;
+                } else {
+                    listEl.innerHTML = items.map(w => this.renderWorkoutHistoryCardHtml(w)).join('');
+                }
+                document.getElementById('modalClientHistory').classList.remove('hidden');
+            }
+
+            closeClientHistoryModal() {
+                document.getElementById('modalClientHistory').classList.add('hidden');
+            }
+
+            // ============================================================================
+            // TAB 2: ACTIVE WORKOUT WITH SPLIT SETS & NON-DESTRUCTIVE TEMPLATE EDITING
+            // ============================================================================
+            quickStartWorkoutForClient(clientId) {
+                this.haptic('light');
+                this.switchTab('workout');
+                const select = document.getElementById('startWorkoutClientSelect');
+                if (select) select.value = clientId;
+                if (!this.state.activeWorkout) {
+                    this.openSelectTemplateSheet(clientId);
+                }
+            }
+
+            renderWorkoutTab() {
+                const inactiveEl = document.getElementById('workoutInactiveState');
+                const activeEl = document.getElementById('workoutActiveState');
+
+                // Populate client dropdowns
+                const clientOptionsHtml = [
+                    `<option value="">Без привязки к клиенту</option>`,
+                    ...this.state.clients.map(c => `<option value="${c.id}">${this.escapeHtml(c.name)} (${this.escapeHtml(c.level)})</option>`)
+                ].join('');
+
+                const startSelect = document.getElementById('startWorkoutClientSelect');
+                if (startSelect) {
+                    const prevVal = startSelect.value || (this.state.clients[0]?.id || '');
+                    startSelect.innerHTML = clientOptionsHtml;
+                    startSelect.value = prevVal;
+                }
+
+                if (!this.state.activeWorkout) {
+                    inactiveEl.classList.remove('hidden');
+                    activeEl.classList.add('hidden');
+                    this.renderRecentWorkoutsFeed();
+                    return;
+                }
+
+                inactiveEl.classList.add('hidden');
+                activeEl.classList.remove('hidden');
+
+                const aw = this.state.activeWorkout;
+                document.getElementById('activeWorkoutTitleInput').value = aw.title;
+                document.getElementById('activeWorkoutComment').value = aw.comment || '';
+
+                const activeClientSelect = document.getElementById('activeWorkoutClientSelect');
+                if (activeClientSelect) {
+                    activeClientSelect.innerHTML = clientOptionsHtml;
+                    activeClientSelect.value = aw.clientId || '';
+                }
+
+                const sourceBadge = document.getElementById('activeTemplateSourceBadge');
+                if (aw.sourceTemplateId) {
+                    sourceBadge.innerHTML = `<span class="px-2 py-0.5 rounded-md bg-ios-indigo/10 text-ios-indigo font-medium">Шаблон: ${this.escapeHtml(aw.sourceTemplateTitle)}</span>`;
+                } else {
+                    sourceBadge.innerHTML = `<span class="text-ios-gray">Свободная тренировка</span>`;
+                }
+
+                // Show non-destructive banner if modified during live session
+                const modBanner = document.getElementById('activeWorkoutModifiedBanner');
+                if (aw.sourceTemplateId && aw.isModifiedFromTemplate) {
+                    modBanner.classList.remove('hidden');
+                } else {
+                    modBanner.classList.add('hidden');
+                }
+
+                // Render exercises with split sets
+                const listEl = document.getElementById('activeWorkoutExercisesList');
+                if (aw.exercises.length === 0) {
+                    listEl.innerHTML = `
+                        <div class="ios-card p-6 text-center text-xs text-ios-gray">
+                            В тренировке пока нет упражнений. Нажмите «Добавить упражнение из базы DDX» ниже.
+                        </div>
+                    `;
+                } else {
+                    listEl.innerHTML = aw.exercises.map((ex, exIdx) => this.renderSplitSetsExerciseCard(ex, exIdx, 'workout')).join('');
+                }
+            }
+
+            // Renders an Exercise Card with Split Sets (Weight & Reps per individual set)
+            renderSplitSetsExerciseCard(ex, exIdx, context = 'workout') {
+                const isWorkout = context === 'workout';
+                return `
+                    <div class="ios-card p-4 space-y-3">
+                        <!-- Exercise Header with Editable Title & Muscles Subtitle -->
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="w-5 h-5 rounded-full bg-ios-blue/15 text-ios-blue text-[11px] font-bold flex items-center justify-center shrink-0">
+                                        ${exIdx + 1}
+                                    </span>
+                                    <h4 class="font-bold text-[14px] leading-snug">${this.escapeHtml(ex.name)}</h4>
+                                    <button onclick="window.app.openRenameExerciseInContext('${context}', '${ex.uid}')"
+                                        class="text-ios-blue hover:opacity-80 px-1.5 py-0.5 rounded text-xs ios-press" title="Изменить название упражнения">
+                                        <i class="fa-solid fa-pen text-[11px]"></i>
+                                    </button>
+                                </div>
+                                <p class="text-[11px] text-ios-gray mt-0.5 pl-6 leading-tight">
+                                    Включающиеся мышцы: ${this.escapeHtml(ex.muscles || 'Базовая группа мышц')}
+                                </p>
+                            </div>
+
+                            <button onclick="window.app.removeExerciseFromContext('${context}', '${ex.uid}')"
+                                class="w-7 h-7 rounded-lg bg-ios-red/10 text-ios-red flex items-center justify-center text-xs shrink-0 ios-press" title="Убрать упражнение">
+                                <i class="fa-solid fa-trash-can text-[11px]"></i>
+                            </button>
+                        </div>
+
+                        <!-- Split Sets Table Header -->
+                        <div class="space-y-1.5 pt-1">
+                            <div class="grid ${isWorkout ? 'grid-cols-12' : 'grid-cols-10'} gap-2 px-2 text-[10px] font-bold uppercase tracking-wider text-ios-gray">
+                                <div class="col-span-2">Подход</div>
+                                <div class="col-span-4 text-center">Вес (кг)</div>
+                                <div class="col-span-3 text-center">Повтор.</div>
+                                ${isWorkout ? `<div class="col-span-2 text-center">Готово</div>` : ''}
+                                <div class="col-span-1"></div>
+                            </div>
+
+                            <!-- Individual Split Sets Rows -->
+                            ${ex.sets.map((setObj, setIdx) => `
+                                <div class="grid ${isWorkout ? 'grid-cols-12' : 'grid-cols-10'} gap-2 items-center p-1.5 rounded-xl transition-colors ${setObj.done && isWorkout ? 'bg-ios-green/12' : 'bg-black/[0.03] dark:bg-white/[0.05]'}">
+                                    <div class="col-span-2 pl-1.5">
+                                        <span class="text-xs font-bold text-ios-gray">#${setIdx + 1}</span>
+                                    </div>
+
+                                    <div class="col-span-4">
+                                        <input type="text" inputmode="decimal" value="${this.escapeHtml(setObj.weight)}" placeholder="0"
+                                            oninput="window.app.updateSplitSetValue('${context}', '${ex.uid}', ${setIdx}, 'weight', this.value)"
+                                            class="w-full py-1.5 px-2 rounded-lg bg-white dark:bg-ios-darkElevated text-center font-bold text-sm focus:outline-none focus:ring-2 focus:ring-ios-blue/40">
+                                    </div>
+
+                                    <div class="col-span-3">
+                                        <input type="text" inputmode="numeric" value="${this.escapeHtml(setObj.reps)}" placeholder="12"
+                                            oninput="window.app.updateSplitSetValue('${context}', '${ex.uid}', ${setIdx}, 'reps', this.value)"
+                                            class="w-full py-1.5 px-2 rounded-lg bg-white dark:bg-ios-darkElevated text-center font-bold text-sm focus:outline-none focus:ring-2 focus:ring-ios-blue/40">
+                                    </div>
+
+                                    ${isWorkout ? `
+                                        <div class="col-span-2 flex justify-center">
+                                            <button onclick="window.app.toggleSplitSetDone('${ex.uid}', ${setIdx})"
+                                                class="w-8 h-8 rounded-lg flex items-center justify-center transition-all ios-press ${setObj.done ? 'bg-ios-green text-white shadow-xs' : 'bg-black/10 dark:bg-white/10 text-ios-gray'}">
+                                                <i class="fa-solid fa-check text-xs"></i>
+                                            </button>
+                                        </div>
+                                    ` : ''}
+
+                                    <div class="col-span-1 flex justify-center">
+                                        <button onclick="window.app.removeSplitSet('${context}', '${ex.uid}', ${setIdx})"
+                                            class="text-ios-gray hover:text-ios-red text-xs p-1">
+                                            <i class="fa-solid fa-xmark"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+
+                        <!-- Add Split Set Button -->
+                        <button onclick="window.app.addSplitSet('${context}', '${ex.uid}')"
+                            class="w-full py-2 rounded-xl bg-ios-blue/10 text-ios-blue font-semibold text-xs flex items-center justify-center gap-1.5 ios-press">
+                            <i class="fa-solid fa-plus text-[10px]"></i>
+                            <span>Добавить подход</span>
+                        </button>
+                    </div>
+                `;
+            }
+
+            // Split Set Operations (Add, Remove, Update Weight/Reps, Toggle Done)
+            addSplitSet(context, exUid) {
+                this.haptic('light');
+                const targetList = context === 'workout' ? this.state.activeWorkout?.exercises : this.editingProgramDraft?.exercises;
+                if (!targetList) return;
+                const ex = targetList.find(e => e.uid === exUid);
+                if (!ex) return;
+
+                const lastSet = ex.sets[ex.sets.length - 1] || { weight: '40', reps: '12' };
+                ex.sets.push({
+                    weight: lastSet.weight,
+                    reps: lastSet.reps,
+                    done: false
+                });
+
+                if (context === 'workout') {
+                    this.markWorkoutModified();
+                    this.renderWorkoutTab();
+                    this.scheduleSave();
+                } else {
+                    this.renderProgramEditorExercises();
+                }
+            }
+
+            removeSplitSet(context, exUid, setIdx) {
+                this.haptic('light');
+                const targetList = context === 'workout' ? this.state.activeWorkout?.exercises : this.editingProgramDraft?.exercises;
+                if (!targetList) return;
+                const ex = targetList.find(e => e.uid === exUid);
+                if (!ex) return;
+
+                if (ex.sets.length <= 1) {
+                    this.showToast('В упражнении должен остаться минимум 1 подход');
+                    return;
+                }
+                ex.sets.splice(setIdx, 1);
+
+                if (context === 'workout') {
+                    this.markWorkoutModified();
+                    this.renderWorkoutTab();
+                    this.scheduleSave();
+                } else {
+                    this.renderProgramEditorExercises();
+                }
+            }
+
+            updateSplitSetValue(context, exUid, setIdx, field, value) {
+                const targetList = context === 'workout' ? this.state.activeWorkout?.exercises : this.editingProgramDraft?.exercises;
+                if (!targetList) return;
+                const ex = targetList.find(e => e.uid === exUid);
+                if (!ex || !ex.sets[setIdx]) return;
+
+                ex.sets[setIdx][field] = value;
+
+                if (context === 'workout') {
+                    this.markWorkoutModified();
+                    this.scheduleSave();
+                }
+            }
+
+            toggleSplitSetDone(exUid, setIdx) {
+                this.haptic('medium');
+                if (!this.state.activeWorkout) return;
+                const ex = this.state.activeWorkout.exercises.find(e => e.uid === exUid);
+                if (!ex || !ex.sets[setIdx]) return;
+                ex.sets[setIdx].done = !ex.sets[setIdx].done;
+                this.renderWorkoutTab();
+                this.scheduleSave();
+            }
+
+            removeExerciseFromContext(context, exUid) {
+                this.haptic('warning');
+                if (context === 'workout' && this.state.activeWorkout) {
+                    this.state.activeWorkout.exercises = this.state.activeWorkout.exercises.filter(e => e.uid !== exUid);
+                    this.markWorkoutModified();
+                    this.renderWorkoutTab();
+                    this.scheduleSave();
+                } else if (context === 'program' && this.editingProgramDraft) {
+                    this.editingProgramDraft.exercises = this.editingProgramDraft.exercises.filter(e => e.uid !== exUid);
+                    this.renderProgramEditorExercises();
+                }
+            }
+
+            markWorkoutModified() {
+                if (this.state.activeWorkout && this.state.activeWorkout.sourceTemplateId) {
+                    this.state.activeWorkout.isModifiedFromTemplate = true;
+                    const modBanner = document.getElementById('activeWorkoutModifiedBanner');
+                    if (modBanner) modBanner.classList.remove('hidden');
+                }
+            }
+
+            // Start Workout from Saved Template or Blank
+            openSelectTemplateSheet(preselectedClientId = null) {
+                this.haptic('light');
+                if (preselectedClientId) {
+                    const sel = document.getElementById('startWorkoutClientSelect');
+                    if (sel) sel.value = preselectedClientId;
+                }
+
+                const listEl = document.getElementById('selectTemplateSheetList');
+                if (this.state.programs.length === 0) {
+                    listEl.innerHTML = `<div class="p-4 text-center text-xs text-ios-gray">Нет сохраненных шаблонов. Создайте программу во вкладке «Программы».</div>`;
+                } else {
+                    listEl.innerHTML = this.state.programs.map(prog => `
+                        <div onclick="window.app.startWorkoutFromTemplate('${prog.id}')"
+                            class="p-3.5 rounded-2xl bg-black/[0.04] dark:bg-white/[0.07] hover:bg-ios-blue/10 cursor-pointer transition-colors flex items-center justify-between gap-3 ios-press">
+                            <div>
+                                <h4 class="font-bold text-sm">${this.escapeHtml(prog.title)}</h4>
+                                <p class="text-xs text-ios-gray mt-0.5">${prog.exercises.length} упр. • ${this.escapeHtml(prog.description || 'Готовый шаблон')}</p>
+                            </div>
+                            <span class="w-8 h-8 rounded-full bg-ios-blue text-white flex items-center justify-center text-xs shrink-0">
+                                <i class="fa-solid fa-play"></i>
+                            </span>
+                        </div>
+                    `).join('');
+                }
+
+                document.getElementById('modalSelectTemplate').classList.remove('hidden');
+            }
+
+            closeSelectTemplateSheet() {
+                document.getElementById('modalSelectTemplate').classList.add('hidden');
+            }
+
+            startWorkoutFromTemplate(programId) {
+                const prog = this.state.programs.find(p => p.id === programId);
+                if (!prog) return;
+
+                const clientId = document.getElementById('startWorkoutClientSelect')?.value || '';
+                // Deep clone exercises so the original template is NEVER mutated without explicit confirmation
+                const clonedExercises = JSON.parse(JSON.stringify(prog.exercises)).map(ex => ({
+                    ...ex,
+                    uid: 'wex_' + Math.random().toString(36).slice(2, 9),
+                    sets: ex.sets.map(s => ({ ...s, done: false }))
+                }));
+
+                this.state.activeWorkout = {
+                    id: 'aw_' + Date.now(),
+                    startedAt: Date.now(),
+                    clientId,
+                    sourceTemplateId: prog.id,
+                    sourceTemplateTitle: prog.title,
+                    isModifiedFromTemplate: false,
+                    title: prog.title,
+                    comment: '',
+                    exercises: clonedExercises
+                };
+
+                this.haptic('success');
+                this.closeSelectTemplateSheet();
+                this.renderAll();
+                this.scheduleSave();
+                this.showToast('Программа загружена в тренировку');
+            }
+
+            startBlankWorkout() {
+                this.haptic('light');
+                const clientId = document.getElementById('startWorkoutClientSelect')?.value || '';
+                this.state.activeWorkout = {
+                    id: 'aw_' + Date.now(),
+                    startedAt: Date.now(),
+                    clientId,
+                    sourceTemplateId: null,
+                    sourceTemplateTitle: null,
+                    isModifiedFromTemplate: false,
+                    title: 'Новая тренировка DDX',
+                    comment: '',
+                    exercises: []
+                };
+                this.renderAll();
+                this.scheduleSave();
+            }
+
+            updateActiveWorkoutTitle(val) {
+                if (!this.state.activeWorkout) return;
+                this.state.activeWorkout.title = val;
+                this.markWorkoutModified();
+                this.scheduleSave();
+            }
+
+            updateActiveWorkoutComment(val) {
+                if (!this.state.activeWorkout) return;
+                this.state.activeWorkout.comment = val;
+                this.scheduleSave();
+            }
+
+            changeActiveWorkoutClient(clientId) {
+                if (!this.state.activeWorkout) return;
+                this.state.activeWorkout.clientId = clientId;
+                this.scheduleSave();
+            }
+
+            openActiveClientNotesShortcut() {
+                const clientId = this.state.activeWorkout?.clientId;
+                if (!clientId) {
+                    this.showToast('Сначала выберите подопечного в списке');
+                    return;
+                }
+                this.openClientNotes(clientId);
+            }
+
+            cancelActiveWorkout() {
+                this.haptic('warning');
+                this.state.activeWorkout = null;
+                this.renderAll();
+                this.scheduleSave();
+                this.showToast('Активная тренировка сброшена');
+            }
+
+            // Finish Workout Flow with Confirmation Sheet for Modified Templates
+            handleFinishWorkoutClick() {
+                if (!this.state.activeWorkout) return;
+                if (this.state.activeWorkout.exercises.length === 0) {
+                    this.showToast('Добавьте хотя бы одно упражнение');
+                    return;
+                }
+
+                this.haptic('light');
+                const aw = this.state.activeWorkout;
+
+                // If loaded from an existing program template and modified, ask user what to do with the template!
+                if (aw.sourceTemplateId && aw.isModifiedFromTemplate) {
+                    const descEl = document.getElementById('finishModalDescription');
+                    descEl.textContent = `Вы взяли за основу программу «${aw.sourceTemplateTitle}» и изменили её структуру/веса во время тренировки. Изменить исходный шаблон или оставить его прежним?`;
+                    document.getElementById('modalFinishWorkoutConfirm').classList.remove('hidden');
+                } else {
+                    this.finalizeWorkout('history_only');
+                }
+            }
+
+            closeFinishWorkoutModal() {
+                document.getElementById('modalFinishWorkoutConfirm').classList.add('hidden');
+            }
+
+            finalizeWorkout(mode = 'history_only') {
+                const aw = this.state.activeWorkout;
+                if (!aw) return;
+
+                const now = new Date();
+                const dateFormatted = now.toLocaleDateString('ru-RU') + ', ' + now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+                const elapsedMin = Math.max(1, Math.round((Date.now() - (aw.startedAt || Date.now())) / 60000));
+                const clientObj = this.state.clients.find(c => c.id === aw.clientId);
+
+                // Clean copy of exercises for history & template
+                const cleanExercises = JSON.parse(JSON.stringify(aw.exercises)).map(ex => ({
+                    ...ex,
+                    sets: ex.sets.map(s => ({ weight: s.weight, reps: s.reps, done: false }))
+                }));
+
+                // Handle template update modes
+                if (mode === 'update_template' && aw.sourceTemplateId) {
+                    const baseProg = this.state.programs.find(p => p.id === aw.sourceTemplateId);
+                    if (baseProg) {
+                        baseProg.title = aw.title;
+                        baseProg.exercises = cleanExercises;
+                        baseProg.updatedAt = now.toLocaleDateString('ru-RU');
+                    }
+                } else if (mode === 'save_as_new') {
+                    this.state.programs.unshift({
+                        id: 'prog_' + Date.now(),
+                        title: aw.title + ' (Обновленная)',
+                        description: 'Сохранено после тренировки ' + now.toLocaleDateString('ru-RU'),
+                        updatedAt: now.toLocaleDateString('ru-RU'),
+                        exercises: cleanExercises
+                    });
+                }
+
+                // Always record to workout history
+                this.state.workoutHistory.unshift({
+                    id: 'wh_' + Date.now(),
+                    date: dateFormatted,
+                    clientId: aw.clientId || null,
+                    clientName: clientObj ? clientObj.name : 'Без привязки',
+                    title: aw.title,
+                    duration: `${elapsedMin} мин`,
+                    comment: aw.comment || '',
+                    exercises: JSON.parse(JSON.stringify(aw.exercises))
+                });
+
+                this.state.activeWorkout = null;
+                this.closeFinishWorkoutModal();
+                this.haptic('success');
+                this.renderAll();
+                this.scheduleSave();
+
+                if (mode === 'update_template') {
+                    this.showToast('Тренировка сохранена, исходный шаблон обновлен');
+                } else if (mode === 'save_as_new') {
+                    this.showToast('Сохранено в историю и как новый шаблон');
+                } else {
+                    this.showToast('Тренировка сохранена (шаблон программы не изменен)');
+                }
+            }
+
+            renderRecentWorkoutsFeed() {
+                const container = document.getElementById('recentWorkoutsContainer');
+                if (!container) return;
+
+                if (this.state.workoutHistory.length === 0) {
+                    container.innerHTML = `<div class="ios-card p-5 text-center text-xs text-ios-gray">История проведенных тренировок пока пуста.</div>`;
+                    return;
+                }
+
+                container.innerHTML = this.state.workoutHistory.slice(0, 8).map(w => this.renderWorkoutHistoryCardHtml(w)).join('');
+            }
+
+            renderWorkoutHistoryCardHtml(w) {
+                return `
+                    <div class="ios-card p-3.5 space-y-2">
+                        <div class="flex items-start justify-between gap-2">
+                            <div>
+                                <div class="flex items-center gap-1.5">
+                                    <span class="text-xs font-bold text-ios-blue">${this.escapeHtml(w.clientName)}</span>
+                                    <span class="text-[10px] text-ios-gray">• ${this.escapeHtml(w.date)}</span>
+                                </div>
+                                <h4 class="font-bold text-sm mt-0.5">${this.escapeHtml(w.title)}</h4>
+                            </div>
+                            <span class="px-2 py-0.5 rounded-md bg-black/5 dark:bg-white/10 text-[11px] font-medium text-ios-gray">
+                                ${this.escapeHtml(w.duration || '45 мин')}
+                            </span>
+                        </div>
+
+                        <div class="space-y-1 pt-1 border-t border-black/5 dark:border-white/10">
+                            ${(w.exercises || []).map(ex => {
+                                const setsSummary = (ex.sets || []).map(s => `${s.weight || 0}кг×${s.reps || 0}`).join(' | ');
+                                return `
+                                    <div class="text-xs flex items-baseline justify-between gap-2">
+                                        <span class="font-medium truncate">${this.escapeHtml(ex.name)}</span>
+                                        <span class="text-[11px] text-ios-gray font-mono shrink-0">${this.escapeHtml(setsSummary)}</span>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+
+                        ${w.comment ? `<p class="text-[11px] text-ios-gray italic pt-1">"${this.escapeHtml(w.comment)}"</p>` : ''}
+                    </div>
+                `;
+            }
+
+            startTimerLoop() {
+                clearInterval(this.timerInterval);
+                this.timerInterval = setInterval(() => {
+                    const el = document.getElementById('activeWorkoutTimer');
+                    if (!el || !this.state.activeWorkout?.startedAt) return;
+                    const sec = Math.max(0, Math.floor((Date.now() - this.state.activeWorkout.startedAt) / 1000));
+                    const mm = String(Math.floor(sec / 60)).padStart(2, '0');
+                    const ss = String(sec % 60).padStart(2, '0');
+                    el.textContent = `${mm}:${ss}`;
+                }, 1000);
+            }
+
+            // ============================================================================
+            // TAB 3: REUSABLE WORKOUT PROGRAM TEMPLATES (ПРОГРАММЫ)
+            // ============================================================================
+            renderPrograms() {
+                const container = document.getElementById('programsListContainer');
+                if (!container) return;
+
+                if (this.state.programs.length === 0) {
+                    container.innerHTML = `
+                        <div class="ios-card p-6 text-center text-sm text-ios-gray">
+                            У вас пока нет сохраненных программ. Нажмите «Новая программа», чтобы создать шаблон.
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = this.state.programs.map(prog => {
+                    const totalSets = prog.exercises.reduce((acc, e) => acc + (e.sets?.length || 0), 0);
+                    return `
+                        <div class="ios-card p-4 space-y-3">
+                            <div class="flex items-start justify-between gap-2">
+                                <div>
+                                    <h3 class="font-bold text-[15px] leading-snug">${this.escapeHtml(prog.title)}</h3>
+                                    <p class="text-xs text-ios-gray mt-0.5">${this.escapeHtml(prog.description || 'Многоразовый шаблон программы')}</p>
+                                </div>
+                                <div class="flex items-center gap-1">
+                                    <button onclick="window.app.duplicateProgram('${prog.id}')" class="w-8 h-8 rounded-lg text-ios-gray hover:text-ios-blue flex items-center justify-center ios-press" title="Дублировать">
+                                        <i class="fa-regular fa-copy text-xs"></i>
+                                    </button>
+                                    <button onclick="window.app.deleteProgram('${prog.id}')" class="w-8 h-8 rounded-lg text-ios-gray hover:text-ios-red flex items-center justify-center ios-press" title="Удалить">
+                                        <i class="fa-regular fa-trash-can text-xs"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Preview of Exercises & Split Sets -->
+                            <div class="space-y-1.5 bg-black/[0.03] dark:bg-white/[0.05] p-3 rounded-xl">
+                                ${prog.exercises.map((ex, i) => `
+                                    <div class="flex items-center justify-between text-xs gap-2">
+                                        <span class="truncate font-medium">${i + 1}. ${this.escapeHtml(ex.name)}</span>
+                                        <span class="text-[11px] text-ios-gray shrink-0">${ex.sets.length} подх. (${ex.sets.map(s => `${s.weight}×${s.reps}`).join(', ')})</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+
+                            <div class="flex items-center justify-between pt-1 gap-2">
+                                <span class="text-[11px] text-ios-gray">${prog.exercises.length} упр. • ${totalSets} подходов</span>
+                                <div class="flex items-center gap-2">
+                                    <button onclick="window.app.openProgramEditor('${prog.id}')" class="px-3 py-2 rounded-xl bg-black/[0.06] dark:bg-white/[0.1] text-xs font-semibold flex items-center gap-1.5 ios-press">
+                                        <i class="fa-solid fa-sliders text-[11px]"></i>
+                                        <span>Изменить</span>
+                                    </button>
+                                    <button onclick="window.app.startWorkoutFromProgramCard('${prog.id}')" class="px-3.5 py-2 rounded-xl bg-ios-blue text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs ios-press">
+                                        <i class="fa-solid fa-play text-[10px]"></i>
+                                        <span>Начать тренировку</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            startWorkoutFromProgramCard(programId) {
+                this.switchTab('workout');
+                this.startWorkoutFromTemplate(programId);
+            }
+
+            openProgramEditor(programId = null) {
+                this.haptic('light');
+                const existing = programId ? this.state.programs.find(p => p.id === programId) : null;
+
+                this.editingProgramDraft = existing
+                    ? JSON.parse(JSON.stringify(existing))
+                    : {
+                        id: null,
+                        title: '',
+                        description: '',
+                        exercises: []
+                    };
+
+                document.getElementById('tab-programs').classList.add('hidden');
+                document.getElementById('view-program-editor').classList.remove('hidden');
+                document.getElementById('programEditorHeaderTitle').textContent = existing ? 'Изменить шаблон' : 'Новая программа';
+                document.getElementById('programEditorTitle').value = this.editingProgramDraft.title;
+                document.getElementById('programEditorDesc').value = this.editingProgramDraft.description || '';
+
+                this.renderProgramEditorExercises();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
+            renderProgramEditorExercises() {
+                const container = document.getElementById('programEditorExercisesList');
+                if (!this.editingProgramDraft) return;
+
+                if (this.editingProgramDraft.exercises.length === 0) {
+                    container.innerHTML = `
+                        <div class="ios-card p-6 text-center text-xs text-ios-gray">
+                            В шаблоне пока нет упражнений. Нажмите кнопку ниже, чтобы добавить упражнения из базы DDX.
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = this.editingProgramDraft.exercises
+                    .map((ex, idx) => this.renderSplitSetsExerciseCard(ex, idx, 'program'))
+                    .join('');
+            }
+
+            saveProgramFromEditor() {
+                if (!this.editingProgramDraft) return;
+                const title = document.getElementById('programEditorTitle').value.trim();
+                const desc = document.getElementById('programEditorDesc').value.trim();
+
+                if (!title) {
+                    this.showToast('Введите название программы');
+                    return;
+                }
+
+                const nowStr = new Date().toLocaleDateString('ru-RU');
+                if (this.editingProgramDraft.id) {
+                    const idx = this.state.programs.findIndex(p => p.id === this.editingProgramDraft.id);
+                    if (idx !== -1) {
+                        this.state.programs[idx] = {
+                            ...this.editingProgramDraft,
+                            title,
+                            description: desc,
+                            updatedAt: nowStr
+                        };
+                    }
+                } else {
+                    this.state.programs.unshift({
+                        id: 'prog_' + Date.now(),
+                        title,
+                        description: desc,
+                        updatedAt: nowStr,
+                        exercises: this.editingProgramDraft.exercises
+                    });
+                }
+
+                this.haptic('success');
+                this.closeProgramEditor();
+                this.renderAll();
+                this.scheduleSave();
+                this.showToast('Шаблон программы сохранен');
+            }
+
+            closeProgramEditor() {
+                this.editingProgramDraft = null;
+                document.getElementById('view-program-editor').classList.add('hidden');
+                document.getElementById('tab-programs').classList.remove('hidden');
+            }
+
+            duplicateProgram(programId) {
+                this.haptic('light');
+                const orig = this.state.programs.find(p => p.id === programId);
+                if (!orig) return;
+                const copy = JSON.parse(JSON.stringify(orig));
+                copy.id = 'prog_' + Date.now();
+                copy.title = orig.title + ' (Копия)';
+                this.state.programs.unshift(copy);
+                this.renderAll();
+                this.scheduleSave();
+                this.showToast('Программа продублирована');
+            }
+
+            deleteProgram(programId) {
+                this.haptic('warning');
+                this.state.programs = this.state.programs.filter(p => p.id !== programId);
+                this.renderAll();
+                this.scheduleSave();
+                this.showToast('Программа удалена');
+            }
+
+            // ============================================================================
+            // TAB 4: DDX FITNESS EXERCISE LIBRARY & EDITABLE EXERCISE NAMES
+            // ============================================================================
+            getCategoriesList() {
+                const cats = ['Все'];
+                this.state.exercises.forEach(ex => {
+                    if (!cats.includes(ex.category)) cats.push(ex.category);
+                });
+                return cats;
+            }
+
+            renderExercisesCatalog() {
+                const pillsContainer = document.getElementById('exerciseCategoryPills');
+                const catalogContainer = document.getElementById('exercisesCatalogContainer');
+                if (!pillsContainer || !catalogContainer) return;
+
+                const categories = this.getCategoriesList();
+                pillsContainer.innerHTML = categories.map(cat => {
+                    const active = this.selectedCategoryFilter === cat;
+                    return `
+                        <button onclick="window.app.setExerciseCategoryFilter('${cat}')"
+                            class="px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ios-press ${active ? 'bg-ios-blue text-white shadow-xs' : 'bg-black/[0.06] dark:bg-white/[0.1] text-ios-gray'}">
+                            ${this.escapeHtml(cat)}
+                        </button>
+                    `;
+                }).join('');
+
+                const query = (document.getElementById('exerciseSearchInput')?.value || '').trim().toLowerCase();
+                const filtered = this.state.exercises.filter(ex => {
+                    const matchesCat = this.selectedCategoryFilter === 'Все' || ex.category === this.selectedCategoryFilter;
+                    const matchesQuery = !query || ex.name.toLowerCase().includes(query) || ex.muscles.toLowerCase().includes(query);
+                    return matchesCat && matchesQuery;
+                });
+
+                // Group by category exactly like the Word file
+                const grouped = {};
+                filtered.forEach(ex => {
+                    if (!grouped[ex.category]) grouped[ex.category] = [];
+                    grouped[ex.category].push(ex);
+                });
+
+                const groupKeys = Object.keys(grouped);
+                if (groupKeys.length === 0) {
+                    catalogContainer.innerHTML = `<div class="ios-card p-6 text-center text-xs text-ios-gray">Упражнения не найдены.</div>`;
+                    return;
+                }
+
+                catalogContainer.innerHTML = groupKeys.map(cat => `
+                    <div class="space-y-2">
+                        <h3 class="px-1 text-xs font-bold uppercase tracking-wider text-ios-gray">${this.escapeHtml(cat)}</h3>
+                        <div class="ios-card divide-y divide-black/5 dark:divide-white/10 overflow-hidden">
+                            ${grouped[cat].map(ex => `
+                                <div class="p-3.5 flex items-start justify-between gap-3">
+                                    <div class="space-y-1">
+                                        <div class="font-semibold text-[14px] leading-snug">
+                                            • ${this.escapeHtml(ex.name)}
+                                        </div>
+                                        <div class="text-[11px] text-ios-gray pl-3 leading-tight">
+                                            Включающиеся мышцы: ${this.escapeHtml(ex.muscles)}
+                                        </div>
+                                    </div>
+                                    <button onclick="window.app.openEditExerciseModal('${ex.id}')"
+                                        class="w-8 h-8 rounded-xl bg-ios-blue/10 text-ios-blue flex items-center justify-center shrink-0 ios-press" title="Изменить название и мышцы">
+                                        <i class="fa-solid fa-pen text-xs"></i>
+                                    </button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            setExerciseCategoryFilter(cat) {
+                this.haptic('light');
+                this.selectedCategoryFilter = cat;
+                this.renderExercisesCatalog();
+            }
+
+            // Edit Exercise Name & Muscles Modal (Works from Catalog AND inside Active Workout / Template)
+            openEditExerciseModal(exerciseId = null) {
+                this.haptic('light');
+                const ex = exerciseId ? this.state.exercises.find(e => e.id === exerciseId) : null;
+
+                this.editingExerciseTarget = {
+                    mode: 'catalog',
+                    exerciseId: ex ? ex.id : null
+                };
+
+                document.getElementById('modalEditExerciseTitle').textContent = ex ? 'Редактировать упражнение' : 'Новое упражнение DDX';
+                document.getElementById('editExCategory').value = ex ? ex.category : 'Грудные мышцы';
+                document.getElementById('editExName').value = ex ? ex.name : '';
+                document.getElementById('editExMuscles').value = ex ? ex.muscles : '';
+                document.getElementById('editExScopeContainer').classList.add('hidden');
+
+                document.getElementById('modalEditExercise').classList.remove('hidden');
+            }
+
+            openRenameExerciseInContext(context, exUid) {
+                this.haptic('light');
+                const list = context === 'workout' ? this.state.activeWorkout?.exercises : this.editingProgramDraft?.exercises;
+                if (!list) return;
+                const item = list.find(e => e.uid === exUid);
+                if (!item) return;
+
+                const catalogEx = this.state.exercises.find(e => e.id === item.exerciseId);
+
+                this.editingExerciseTarget = {
+                    mode: context,
+                    workoutExUid: exUid,
+                    exerciseId: item.exerciseId
+                };
+
+                document.getElementById('modalEditExerciseTitle').textContent = 'Изменить название упражнения';
+                document.getElementById('editExCategory').value = catalogEx ? catalogEx.category : 'Грудные мышцы';
+                document.getElementById('editExName').value = item.name;
+                document.getElementById('editExMuscles').value = item.muscles || '';
+                document.getElementById('editExScopeContainer').classList.remove('hidden');
+
+                document.getElementById('modalEditExercise').classList.remove('hidden');
+            }
+
+            closeEditExerciseModal() {
+                document.getElementById('modalEditExercise').classList.add('hidden');
+            }
+
+            saveExerciseFromModal() {
+                const category = document.getElementById('editExCategory').value;
+                const name = document.getElementById('editExName').value.trim();
+                const muscles = document.getElementById('editExMuscles').value.trim() || 'Целевая мышечная группа';
+                const updateGlobal = document.getElementById('editExUpdateGlobalCheck').checked;
+
+                if (!name) {
+                    this.showToast('Введите название упражнения');
+                    return;
+                }
+
+                const target = this.editingExerciseTarget;
+                if (!target) return;
+
+                if (target.mode === 'catalog') {
+                    if (target.exerciseId) {
+                        const ex = this.state.exercises.find(e => e.id === target.exerciseId);
+                        if (ex) {
+                            ex.category = category;
+                            ex.name = name;
+                            ex.muscles = muscles;
+                        }
+                    } else {
+                        this.state.exercises.unshift({
+                            id: 'ddx_custom_' + Date.now(),
+                            category,
+                            name,
+                            muscles
+                        });
+                    }
+                } else {
+                    // Rename inside Active Workout or Program Template
+                    const list = target.mode === 'workout' ? this.state.activeWorkout?.exercises : this.editingProgramDraft?.exercises;
+                    const item = list?.find(e => e.uid === target.workoutExUid);
+                    if (item) {
+                        item.name = name;
+                        item.muscles = muscles;
+                    }
+                    if (target.mode === 'workout') {
+                        this.markWorkoutModified();
+                    }
+                    // Also update global catalog if checkbox is checked
+                    if (updateGlobal && target.exerciseId) {
+                        const globalEx = this.state.exercises.find(e => e.id === target.exerciseId);
+                        if (globalEx) {
+                            globalEx.category = category;
+                            globalEx.name = name;
+                            globalEx.muscles = muscles;
+                        }
+                    }
+                }
+
+                this.haptic('success');
+                this.closeEditExerciseModal();
+                this.renderAll();
+                if (this.editingProgramDraft) this.renderProgramEditorExercises();
+                this.scheduleSave();
+                this.showToast('Упражнение обновлено');
+            }
+
+            // ============================================================================
+            // EXERCISE PICKER MODAL (FOR ADDING TO WORKOUT OR PROGRAM)
+            // ============================================================================
+            openExercisePicker(context = 'workout') {
+                this.haptic('light');
+                this.pickerContext = context;
+                this.pickerCategoryFilter = 'Все';
+                document.getElementById('pickerSearchInput').value = '';
+                this.renderPickerExercises();
+                document.getElementById('modalExercisePicker').classList.remove('hidden');
+            }
+
+            closeExercisePicker() {
+                document.getElementById('modalExercisePicker').classList.add('hidden');
+            }
+
+            setPickerCategoryFilter(cat) {
+                this.haptic('light');
+                this.pickerCategoryFilter = cat;
+                this.renderPickerExercises();
+            }
+
+            renderPickerExercises() {
+                const pillsEl = document.getElementById('pickerCategoryPills');
+                const listEl = document.getElementById('pickerExercisesList');
+                const categories = this.getCategoriesList();
+
+                pillsEl.innerHTML = categories.map(cat => {
+                    const active = this.pickerCategoryFilter === cat;
+                    return `
+                        <button onclick="window.app.setPickerCategoryFilter('${cat}')"
+                            class="px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${active ? 'bg-ios-blue text-white' : 'bg-black/5 dark:bg-white/10 text-ios-gray'}">
+                            ${this.escapeHtml(cat)}
+                        </button>
+                    `;
+                }).join('');
+
+                const q = (document.getElementById('pickerSearchInput')?.value || '').trim().toLowerCase();
+                const filtered = this.state.exercises.filter(ex => {
+                    const matchCat = this.pickerCategoryFilter === 'Все' || ex.category === this.pickerCategoryFilter;
+                    const matchQ = !q || ex.name.toLowerCase().includes(q) || ex.muscles.toLowerCase().includes(q);
+                    return matchCat && matchQ;
+                });
+
+                listEl.innerHTML = filtered.map(ex => `
+                    <div onclick="window.app.selectExerciseFromPicker('${ex.id}')"
+                        class="p-3 rounded-2xl bg-black/[0.03] dark:bg-white/[0.06] hover:bg-ios-blue/10 cursor-pointer flex items-center justify-between gap-3 ios-press">
+                        <div>
+                            <div class="font-semibold text-xs leading-snug">${this.escapeHtml(ex.name)}</div>
+                            <div class="text-[11px] text-ios-gray mt-0.5">${this.escapeHtml(ex.muscles)}</div>
+                        </div>
+                        <span class="w-7 h-7 rounded-full bg-ios-blue/15 text-ios-blue flex items-center justify-center text-xs shrink-0">
+                            <i class="fa-solid fa-plus"></i>
+                        </span>
+                    </div>
+                `).join('');
+            }
+
+            selectExerciseFromPicker(exerciseId) {
+                const ex = this.state.exercises.find(e => e.id === exerciseId);
+                if (!ex) return;
+
+                const newEntry = {
+                    uid: 'exu_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+                    exerciseId: ex.id,
+                    name: ex.name,
+                    muscles: ex.muscles,
+                    sets: [
+                        { weight: '40', reps: '12', done: false },
+                        { weight: '40', reps: '12', done: false },
+                        { weight: '40', reps: '12', done: false }
+                    ]
+                };
+
+                if (this.pickerContext === 'workout' && this.state.activeWorkout) {
+                    this.state.activeWorkout.exercises.push(newEntry);
+                    this.markWorkoutModified();
+                    this.renderWorkoutTab();
+                    this.scheduleSave();
+                } else if (this.pickerContext === 'program' && this.editingProgramDraft) {
+                    this.editingProgramDraft.exercises.push(newEntry);
+                    this.renderProgramEditorExercises();
+                }
+
+                this.haptic('success');
+                this.closeExercisePicker();
+                this.showToast('Упражнение добавлено');
+            }
+
+            escapeHtml(str) {
+                return String(str ?? '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;');
+            }
+        }
+
+        // Start application on load
+        window.onload = () => {
+            window.app = new TrainerProApp();
+            window.app.init();
+        };
+    </script>
+</body>
+</html>
